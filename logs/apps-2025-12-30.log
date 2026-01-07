@@ -1,0 +1,64 @@
+{"level":"error","message":"Error while deleting role: Role not found","timestamp":"2025-12-30T03:12:47.589Z"}
+{"level":"error","message":"Error deleting role: Role not found","timestamp":"2025-12-30T03:12:47.595Z"}
+{"level":"error","message":"Error while deleting role: Role not found","timestamp":"2025-12-30T03:14:11.088Z"}
+{"level":"error","message":"Error deleting role: Role not found","timestamp":"2025-12-30T03:14:11.093Z"}
+{"level":"error","message":"Error while deleting role: Role not found","timestamp":"2025-12-30T03:20:23.558Z"}
+{"level":"error","message":"Error deleting role: Role not found","timestamp":"2025-12-30T03:20:23.563Z"}
+{"level":"error","message":"Error while deleting role: Role not found","timestamp":"2025-12-30T03:21:16.237Z"}
+{"level":"error","message":"Error deleting role: Role not found","timestamp":"2025-12-30T03:21:16.239Z"}
+{"level":"error","message":"Error while deleting role: Role not found","timestamp":"2025-12-30T03:21:28.255Z"}
+{"level":"error","message":"Error deleting role: Role not found","timestamp":"2025-12-30T03:21:28.256Z"}
+{"level":"error","message":"Error while deleting role: Role not found","timestamp":"2025-12-30T03:22:58.787Z"}
+{"level":"error","message":"Error deleting role: Role not found","timestamp":"2025-12-30T03:22:58.788Z"}
+{"level":"error","message":"Error while deleting role: Role not found","timestamp":"2025-12-30T03:23:22.126Z"}
+{"level":"error","message":"Error deleting role: Role not found","timestamp":"2025-12-30T03:23:22.129Z"}
+{"level":"error","message":"Error while getting role: Role not found","timestamp":"2025-12-30T04:40:19.907Z"}
+{"level":"error","message":"Error getting role: Role not found","timestamp":"2025-12-30T04:40:19.910Z"}
+{"level":"error","message":"Error while getting role: Role not found","timestamp":"2025-12-30T04:40:21.222Z"}
+{"level":"error","message":"Error getting role: Role not found","timestamp":"2025-12-30T04:40:21.223Z"}
+{"level":"error","message":"Error while getting role: Role not found","timestamp":"2025-12-30T04:40:38.652Z"}
+{"level":"error","message":"Error getting role: Role not found","timestamp":"2025-12-30T04:40:38.653Z"}
+{"level":"error","message":"Error while getting role: Role not found","timestamp":"2025-12-30T04:40:38.713Z"}
+{"level":"error","message":"Error getting role: Role not found","timestamp":"2025-12-30T04:40:38.714Z"}
+{"level":"error","message":"Error while getting role: Role not found","timestamp":"2025-12-30T04:40:44.796Z"}
+{"level":"error","message":"Error getting role: Role not found","timestamp":"2025-12-30T04:40:44.797Z"}
+{"level":"error","message":"Error while getting role: Role not found","timestamp":"2025-12-30T04:40:44.889Z"}
+{"level":"error","message":"Error getting role: Role not found","timestamp":"2025-12-30T04:40:44.889Z"}
+{"level":"error","message":"Error while getting role: Role not found","timestamp":"2025-12-30T04:40:46.108Z"}
+{"level":"error","message":"Error getting role: Role not found","timestamp":"2025-12-30T04:40:46.108Z"}
+{"level":"error","message":"Error while getting role: Role not found","timestamp":"2025-12-30T04:40:46.163Z"}
+{"level":"error","message":"Error getting role: Role not found","timestamp":"2025-12-30T04:40:46.164Z"}
+{"level":"error","message":"Error while adding role: Role validation failed: status: `active` is not a valid enum value for path `status`.","timestamp":"2025-12-30T05:40:32.142Z"}
+{"level":"error","message":"Error creating role: Role validation failed: status: `active` is not a valid enum value for path `status`.","timestamp":"2025-12-30T05:40:32.144Z"}
+{"level":"error","message":"Error while adding role: Role validation failed: status: `active` is not a valid enum value for path `status`.","timestamp":"2025-12-30T05:40:50.839Z"}
+{"level":"error","message":"Error creating role: Role validation failed: status: `active` is not a valid enum value for path `status`.","timestamp":"2025-12-30T05:40:50.840Z"}
+{"level":"error","message":"Error while adding role: Role validation failed: status: `active` is not a valid enum value for path `status`.","timestamp":"2025-12-30T05:40:54.715Z"}
+{"level":"error","message":"Error creating role: Role validation failed: status: `active` is not a valid enum value for path `status`.","timestamp":"2025-12-30T05:40:54.717Z"}
+{"level":"error","message":"Error while adding role: Role validation failed: status: `active` is not a valid enum value for path `status`.","timestamp":"2025-12-30T05:41:34.908Z"}
+{"level":"error","message":"Error creating role: Role validation failed: status: `active` is not a valid enum value for path `status`.","timestamp":"2025-12-30T05:41:34.910Z"}
+{"level":"error","message":"Error while adding role: Role validation failed: status: `active` is not a valid enum value for path `status`.","timestamp":"2025-12-30T05:41:35.146Z"}
+{"level":"error","message":"Error creating role: Role validation failed: status: `active` is not a valid enum value for path `status`.","timestamp":"2025-12-30T05:41:35.147Z"}
+{"level":"error","message":"Error while updating role: Role not found","timestamp":"2025-12-30T05:42:23.539Z"}
+{"level":"error","message":"Error updating role: Role not found","timestamp":"2025-12-30T05:42:23.545Z"}
+{"level":"error","message":"Error while updating role: Role not found","timestamp":"2025-12-30T05:42:25.662Z"}
+{"level":"error","message":"Error updating role: Role not found","timestamp":"2025-12-30T05:42:25.664Z"}
+{"level":"error","message":"Error while updating role: Operation `roles.findOneAndUpdate()` buffering timed out after 10000ms","timestamp":"2025-12-30T05:43:40.650Z"}
+{"level":"error","message":"Error updating role: Operation `roles.findOneAndUpdate()` buffering timed out after 10000ms","timestamp":"2025-12-30T05:43:40.653Z"}
+{"level":"error","message":"Error while updating role: Operation `roles.findOneAndUpdate()` buffering timed out after 10000ms","timestamp":"2025-12-30T05:43:42.849Z"}
+{"level":"error","message":"Error updating role: Operation `roles.findOneAndUpdate()` buffering timed out after 10000ms","timestamp":"2025-12-30T05:43:42.851Z"}
+{"level":"error","message":"Error while updating role: Operation `roles.findOneAndUpdate()` buffering timed out after 10000ms","timestamp":"2025-12-30T05:44:07.800Z"}
+{"level":"error","message":"Error updating role: Operation `roles.findOneAndUpdate()` buffering timed out after 10000ms","timestamp":"2025-12-30T05:44:07.801Z"}
+{"level":"error","message":"Error while updating role: Operation `roles.findOneAndUpdate()` buffering timed out after 10000ms","timestamp":"2025-12-30T05:44:10.008Z"}
+{"level":"error","message":"Error updating role: Operation `roles.findOneAndUpdate()` buffering timed out after 10000ms","timestamp":"2025-12-30T05:44:10.010Z"}
+{"level":"error","message":"Error while updating role: Operation `roles.findOneAndUpdate()` buffering timed out after 10000ms","timestamp":"2025-12-30T05:44:31.693Z"}
+{"level":"error","message":"Error updating role: Operation `roles.findOneAndUpdate()` buffering timed out after 10000ms","timestamp":"2025-12-30T05:44:31.695Z"}
+{"level":"error","message":"Error while updating role: Role not found","timestamp":"2025-12-30T05:44:45.713Z"}
+{"level":"error","message":"Error updating role: Role not found","timestamp":"2025-12-30T05:44:45.717Z"}
+{"level":"error","message":"Error while updating role: Role not found","timestamp":"2025-12-30T05:53:16.407Z"}
+{"level":"error","message":"Error updating role: Role not found","timestamp":"2025-12-30T05:53:16.409Z"}
+{"level":"error","message":"Error while updating role: Role not found","timestamp":"2025-12-30T05:53:28.834Z"}
+{"level":"error","message":"Error updating role: Role not found","timestamp":"2025-12-30T05:53:28.835Z"}
+{"level":"error","message":"Error while updating role: Role not found","timestamp":"2025-12-30T05:54:43.231Z"}
+{"level":"error","message":"Error updating role: Role not found","timestamp":"2025-12-30T05:54:43.232Z"}
+{"level":"error","message":"Error while getting all roles: getaddrinfo ENOTFOUND ac-pvq5p3s-shard-00-01.ztslkpq.mongodb.net","timestamp":"2025-12-30T14:00:40.326Z"}
+{"level":"error","message":"Error getting all roles: getaddrinfo ENOTFOUND ac-pvq5p3s-shard-00-01.ztslkpq.mongodb.net","timestamp":"2025-12-30T14:00:40.331Z"}
