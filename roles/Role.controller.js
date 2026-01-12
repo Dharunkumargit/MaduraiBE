@@ -88,7 +88,7 @@ export const updateRoleById = async (req, res) => {
   };
 export const deleteRoleById = async (req, res) => {
     try {
-      const { id } = req.params;   // ✅ FIX
+      const { id } = req.params;   
   
       const deleted = await RoleService.deleteRoleByMongoId(id);
   

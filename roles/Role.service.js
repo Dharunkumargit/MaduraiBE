@@ -32,6 +32,7 @@ class RoleService {
     }
   }
 
+
   static async updateRole(role_id,updateData) {
     try {
       return await RoleModel.findOneAndUpdate(

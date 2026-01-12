@@ -41,7 +41,7 @@ export const loginUser = async ({ email, password }) => {
     throw new Error("User is inactive");
   }
 
-  return user;
+  return user;  
 };
 
 /* ================= GET USERS ================= */
