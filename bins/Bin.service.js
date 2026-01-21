@@ -7,7 +7,7 @@ let binCounter = 0;
 
 const generateBinId = () => {
   binCounter += 1;
-  return `MCB${String(binCounter).padStart(3, "0")}`;
+  return `MSB${String(binCounter).padStart(3, "0")}`;
 };
 
 export const addBin = async (data) => {
