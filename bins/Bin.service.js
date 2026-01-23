@@ -1,31 +1,223 @@
 import Bin from "../bins/Bin.schema.js";
-import { v4 as uuidv4 } from "uuid";
+import axios from "axios";
+import BinDailyData from "../bindailydata/bindaily.schema.js";
 import { getLocationFromLatLong } from "../utils/getLocationFromLatLong.js";
 import { createEscalation } from "../Service/Escalation_service.js";
 
+// -------------------------
+// Bin ID Generator
+// -------------------------
 let binCounter = 0;
-
 const generateBinId = () => {
   binCounter += 1;
   return `MSB${String(binCounter).padStart(3, "0")}`;
 };
 
+// -------------------------
+// Timestamp Parser
+// -------------------------
+const parseOutsourceTimestamp = (ts) => {
+  if (!ts) return null;
+  const fixed = ts.replace(/T(\d{2})-(\d{2})-(\d{2})/, "T$1:$2:$3");
+  const date = new Date(fixed);
+  return isNaN(date) ? null : date;
+};
+
+const getDummyOutsourceData = () => {
+  const now = new Date();
+
+  return [
+    {
+      bin_id: "MSB009",
+      latest_1: {
+        timestamp: new Date(now.getTime() - 20 * 60 * 1000).toISOString(),
+        fill_level: 80,
+        image_url: "https://dummy.com/bin80.jpg",
+      },
+      latest_2: {
+        timestamp: new Date(now.getTime() - 2 * 60 * 1000).toISOString(),
+        fill_level: 0,
+        image_url: "https://dummy.com/bin100.jpg",
+      },
+    },
+  ];
+};
+const latestBinStates = new Map();
+// -------------------------
+export const syncOutsourceBins = async () => {
+  try {
+    const { data } = await axios.get(
+      "http://ec2-54-157-168-45.compute-1.amazonaws.com:8000/latest",
+      { timeout: 10000 },
+    );
+    // const data = getDummyOutsourceData();
+
+    const records = Array.isArray(data) ? data : [data];
+    const now = new Date();
+
+    for (const item of records) {
+      const bin = await Bin.findOne({ binid: item.bin_id });
+      if (!bin) continue;
+
+      // Build history
+      const history = Object.keys(item)
+        .filter((k) => k.startsWith("latest_"))
+        .map((k) => {
+          const ts = parseOutsourceTimestamp(item[k]?.timestamp);
+          if (!ts) return null;
+          return {
+            timestamp: ts,
+            image_url: item[k].image_url,
+            fill_level: Number(item[k].fill_level) || 0,
+          };
+        })
+        .filter(Boolean)
+        .sort((a, b) => b.timestamp - a.timestamp);
+
+      if (!history.length) continue;
+
+      const latest = history[0];
+      const prevFill = bin.history?.[0]?.fill_level ?? bin.filled ?? 0;
+
+      // -------------------------
+      // FULL EVENT
+      // -------------------------
+      if (prevFill < 100 && latest.fill_level >= 100) {
+        bin.clearedCount += 1;
+        bin.lastFullAt = latest.timestamp;
+        bin.totalClearedAmount = bin.clearedCount * bin.capacity;
+      }
+
+      // -------------------------
+      // CLEARED EVENT
+      // -------------------------
+      if (prevFill >= 100 && latest.fill_level < 100) {
+        bin.lastClearedAt = latest.timestamp;
+        bin.lastCollectedAt = latest.timestamp;
+        if (bin.lastFullAt) {
+          const mins = (latest.timestamp - bin.lastFullAt) / (1000 * 60);
+
+          // accumulate total time
+          bin.totalClearTimeMins += mins;
+
+          // true average = totalClearTime / clearedCount
+          bin.avgClearTimeMins = Math.round(
+            bin.totalClearTimeMins / bin.clearedCount,
+          );
+
+          // reset for next cycle
+          bin.lastFullAt = null;
+        }
+      }
+
+      // -------------------------
+      // Update State
+      // -------------------------
+      bin.filled = latest.fill_level;
+      bin.lastReportedAt = latest.timestamp;
+      bin.history = history;
+
+      const diffMins = (now - latest.timestamp) / (1000 * 60);
+
+      if (latest.fill_level >= 100) bin.status = "Full";
+      else if (diffMins > 30) bin.status = "Inactive";
+      else bin.status = "Active";
+
+      await bin.save();
+       latestBinStates.set(bin.binid, {
+        binid: bin.binid,
+        zone: bin.zone,
+        ward: bin.ward,
+        fill_level: bin.filled,
+        status: bin.status,
+        clearedCount: bin.clearedCount,
+        totalClearedAmount: bin.totalClearedAmount,
+      });
+    }
+
+    // -------------------------
+    // Global Inactive Check
+    // -------------------------
+    const bins = await Bin.find();
+    for (const bin of bins) {
+      if (!bin.lastReportedAt) continue;
+      const diff = (now - bin.lastReportedAt) / (1000 * 60);
+      if (diff > 30 && bin.status !== "Inactive") {
+        bin.status = "Inactive";
+        await bin.save();
+      }
+    }
+
+    console.log("✅ Outsource sync completed");
+  } catch (err) {
+    console.error("❌ Outsource sync failed:", err.message);
+  }
+};
+
+export const saveEndOfDayData = async () => {
+  try {
+    const now = new Date();
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(0, 0, 0, 0);
+
+    for (const state of latestBinStates.values()) {
+      await BinDailyData.create({
+        ...state,
+        date: yesterday,
+      });
+    }
+
+    console.log("✅ End-of-day bin data saved");
+    latestBinStates.clear();
+  } catch (err) {
+    console.error("❌ Failed to save end-of-day data:", err.message);
+  }
+};
+
+
+export const getAllBins = async () => {
+  const bins = await Bin.find().sort({ createdAt: -1 });
+  const now = new Date();
+
+  return bins.map((bin) => {
+    const latest = bin.history?.[0];
+    const lastTime = latest?.timestamp || bin.lastReportedAt;
+
+    const diff = lastTime ? (now - new Date(lastTime)) / (1000 * 60) : Infinity;
+
+    let status = bin.status; // 👈 default from DB
+
+    if ((latest?.fill_level ?? bin.filled) >= 100) {
+      status = "Full";
+    } else if (lastTime && diff > 30) {
+      status = "Inactive";
+    } else {
+      status = "Active";
+    }
+
+    return {
+      ...bin.toObject(),
+      filled: latest?.fill_level ?? bin.filled,
+      status,
+      totalClearedAmount: (bin.clearedCount * bin.capacity)/1000,
+      lastReportedAt: lastTime
+
+    };
+  });
+};
+
+// -------------------------
+// CRUD
+// -------------------------
 export const addBin = async (data) => {
   const binid = generateBinId();
-
-  const geoLocation = await getLocationFromLatLong(
-    data.latitude,
-    data.longitude
-  );
-
-  const location = `${data.street}, ${geoLocation}`;
+  const geo = await getLocationFromLatLong(data.latitude, data.longitude);
 
   const bin = await Bin.create({
     ...data,
     binid,
-    location,
-
-  
+    location: `${data.street}, ${geo}`,
   });
 
   await createEscalation({
@@ -39,84 +231,26 @@ export const addBin = async (data) => {
   return bin;
 };
 
-export const getAllBins = () => Bin.find().sort({ createdAt: -1 });
-
 export const getBinById = (id) => Bin.findById(id);
+export const deleteBin = (id) => Bin.findByIdAndDelete(id);
 
 export const updateBinService = async (id, data) => {
-  if (data.filled >= 100) {
-    data.status = "Full";
-  } else {
-    data.status = "Active";
-  }
-
-  data.lastcollected = new Date();
-
+  data.lastReportedAt = new Date();
   return Bin.findByIdAndUpdate(id, data, {
     new: true,
     runValidators: true,
   });
 };
 
-export const deleteBin = (id) => Bin.findByIdAndDelete(id);
+// -------------------------
+// Live Monitor
+// -------------------------
+let liveInterval;
+export const startLiveMonitor = () => {
+  if (!liveInterval) liveInterval = setInterval(syncOutsourceBins, 10000);
+};
 
-export const getBinReport = async () => {
-  const bins = await Bin.find().sort({ createdAt: -1 });
-
-  // Group bins by zone + ward for aggregated report
-  const reportMap = {};
-
-  bins.forEach((bin) => {
-    const key = `${bin.zone}-${bin.ward}`;
-
-    if (!reportMap[key]) {
-      reportMap[key] = {
-        binIds: [],
-        totalBins: 0,
-        activeAlerts: 0,
-        cleared: 0,
-        totalResponseTime: 0, // in minutes
-        escalations: 0,
-        totalGarbage: 0, // in tons
-      };
-    }
-
-    const group = reportMap[key];
-
-    group.binIds.push(bin.binid);
-    group.totalBins += 1;
-    group.activeAlerts += bin.status === "Active" ? 1 : 0;
-    group.cleared += bin.filled >= 100 ? 1 : 0;
-
-    // Assume response time stored in bin.responseTime (minutes)
-    // For now, if not present, assume 30 mins
-    group.totalResponseTime += bin.responseTime ? parseInt(bin.responseTime) : 30;
-
-    // Escalations - if you store escalation count per bin, use it
-    group.escalations += bin.escalations || 0;
-
-    // Garbage collected - assume bin.garbageCollected stored in kg
-    group.totalGarbage += bin.garbageCollected ? bin.garbageCollected / 1000 : 0;
-  });
-
-  // Convert map to array with proper fields
-  const report = Object.keys(reportMap).map((key, index) => {
-    const group = reportMap[key];
-
-    return {
-      id: index + 1,
-      binid: group.binIds.join(", "), // show all bin IDs
-      wardno: key.split("-")[1],
-      zone: key.split("-")[0],
-      totalBins: group.totalBins,
-      activeAlerts: group.activeAlerts,
-      cleared: group.cleared,
-      responseTime: `${Math.round(group.totalResponseTime / group.totalBins)} mins`, // avg
-      compliance: `${Math.round((group.cleared / group.totalBins) * 100)}%`,
-      escalations: group.escalations,
-      garbage: `${group.totalGarbage.toFixed(2)} Tons`,
-    };
-  });
-
-  return report;
+export const stopLiveMonitor = () => {
+  clearInterval(liveInterval);
+  liveInterval = null;
 };

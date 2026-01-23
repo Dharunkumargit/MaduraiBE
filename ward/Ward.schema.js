@@ -13,18 +13,10 @@ const WardSchema = new mongoose.Schema(
       trim: true,
       unique: true, 
     },
-    totalbins: { type: Number, required: true, default:0 },
-    activebins: { type: Number, default:0 },
-    inactivebins: { type: Number, default:0 },
-    status: {
-      type: String,
-      required: true,
-      
-      default: "Active",
-    },
+
   },
   { timestamps: true }
 );
-
+WardSchema.index({ zonename: 1, wardname: 1 }, { unique: true });
 const Ward = mongoose.model("Ward", WardSchema);
 export default Ward;

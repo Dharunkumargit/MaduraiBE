@@ -7,6 +7,7 @@ import userRoutes from "./routes/User_routes.js"
 import employeeRoutes from "./routes/Employee_routes.js"
 
 import binroutes from "./bins/Bin.routes.js"
+import bindailyroutes from "./bindailydata/bindaily.route.js"
 import roleRoutes from "./roles/Role.routes.js";
 import EscalationRoutes from "./routes/Escalation_routes.js"
 import zoneroutes from "./zone/Zone.routes.js"
@@ -14,6 +15,9 @@ import wardroutes from "./ward/Ward.routes.js"
 import predictionRoutes from "./prediction/Prediction.routes.js"
 import profileRoutes from "./profiles/Profile.routes.js"
 import dashboardRoutes from "./dashboard/Dashboard.routes.js"
+import "./jobs/bin.health.job.js";
+import { startLiveMonitor } from "./bins/Bin.service.js";
+
 
 
 
@@ -32,7 +36,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+startLiveMonitor();
 app.use("/bins",binroutes)
+app.use("/bindaily",bindailyroutes)
 app.use("/user", userRoutes)
 app.use("/roles", roleRoutes);
 app.use("/zone",zoneroutes)
@@ -56,7 +62,3 @@ app.use("/dashboard",dashboardRoutes)
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
-
-
-
-

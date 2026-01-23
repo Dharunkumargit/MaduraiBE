@@ -40,6 +40,7 @@ export const createBin = async (req, res) => {
 };
 
 export const getAllBins = async (req, res) => {
+  
   const bins = await BinService.getAllBins();
   res.json({ success: true, total: bins.length, data: bins });
 };

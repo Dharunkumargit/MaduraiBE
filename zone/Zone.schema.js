@@ -8,31 +8,6 @@ const ZoneSchema = new mongoose.Schema(
       unique: true,
       trim: true,
     },
-
-    totalbins: {
-      type: Number,
-      required: true,
-      default:0
-    },
-
-    activebins: {
-      type: Number,
-      required: true,
-      default: 0,
-    },
-
-    inactivebins: {
-      type: Number,
-      required: true,
-      default: 0,
-    },
-
-    status: {
-      type: String,
-      
-      default: "Active",
-    },
-
     // store alerts INSIDE zone
     alerts: [
       {
