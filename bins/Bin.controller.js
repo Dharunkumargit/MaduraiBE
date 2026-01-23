@@ -40,9 +40,24 @@ export const createBin = async (req, res) => {
 };
 
 export const getAllBins = async (req, res) => {
-  
-  const bins = await BinService.getAllBins();
-  res.json({ success: true, total: bins.length, data: bins });
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 9;
+
+    const skip = (page - 1) * limit;
+
+    const { bins, total } = await BinService.getAllBins(page, limit, skip);
+
+    res.json({
+      success: true,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+      data: bins,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
 
 export const getBin = async (req, res) => {

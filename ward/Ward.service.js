@@ -26,7 +26,11 @@ export const createWard = async (data) => {
 
 // ---------------- Ward List -------------------
 
-export const getWards = async () => {
+export const getWards = async (page = 1, limit = 8) => {
+  const skip = (page - 1) * limit;
+
+  const totalItems = await Ward.countDocuments();
+
   const wardStats = await Bin.aggregate([
     {
       $group: {
@@ -35,7 +39,6 @@ export const getWards = async () => {
           ward: "$ward",
         },
 
-        // ---- BIN COUNTS ----
         totalbins: { $sum: 1 },
 
         activebins: {
@@ -50,7 +53,6 @@ export const getWards = async () => {
           },
         },
 
-        // ---- CLEARED DATA ----
         totalClearedCount: {
           $sum: { $ifNull: ["$clearedCount", 0] },
         },
@@ -72,11 +74,15 @@ export const getWards = async () => {
     },
   ]);
 
-  const wards = await Ward.find().lean();
+  const wards = await Ward.find()
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit)
+    .lean();
 
-  return wards.map((w) => {
+  const data = wards.map((w) => {
     const stat = wardStats.find(
-      (s) => s._id.zone === w.zonename && s._id.ward === w.wardname,
+      (s) => s._id.zone === w.zonename && s._id.ward === w.wardname
     );
 
     return {
@@ -85,18 +91,31 @@ export const getWards = async () => {
       wardname: w.wardname,
       status: w.status,
 
-      // bins
       totalbins: stat?.totalbins || 0,
       activebins: stat?.activebins || 0,
       inactivebins: stat?.inactivebins || 0,
 
-      // cleared
       clearedCount: stat?.totalClearedCount || 0,
-      clearedWeightKg: stat ? stat.totalClearedWeight / 1000 : "0.00" || 0,
-      avgClearTime: stat?.avgClearTime ? Math.round(stat.avgClearTime) : 0,
+      clearedWeightKg: stat
+        ? (stat.totalClearedWeight / 1000).toFixed(2)
+        : "0.00",
+      avgClearTime: stat?.avgClearTime
+        ? Math.round(stat.avgClearTime)
+        : 0,
     };
   });
+
+  return {
+    wards: data,
+    pagination: {
+      totalItems,
+      totalPages: Math.ceil(totalItems / limit),
+      currentPage: page,
+      itemsPerPage: limit,
+    },
+  };
 };
+
 
 // -------- Ward Wise Report Same Logic ---------
 

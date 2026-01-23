@@ -51,7 +51,7 @@ export const syncOutsourceBins = async () => {
       { timeout: 10000 },
     );
     // const data = getDummyOutsourceData();
-
+   
     const records = Array.isArray(data) ? data : [data];
     const now = new Date();
 
@@ -176,17 +176,25 @@ export const saveEndOfDayData = async () => {
 };
 
 
-export const getAllBins = async () => {
-  const bins = await Bin.find().sort({ createdAt: -1 });
+export const getAllBins = async (page, limit, skip) => {
   const now = new Date();
 
-  return bins.map((bin) => {
+  const total = await Bin.countDocuments();
+
+  const bins = await Bin.find()
+    .sort({ })
+    .skip(skip)
+    .limit(limit);
+
+  const formattedBins = bins.map((bin) => {
     const latest = bin.history?.[0];
     const lastTime = latest?.timestamp || bin.lastReportedAt;
 
-    const diff = lastTime ? (now - new Date(lastTime)) / (1000 * 60) : Infinity;
+    const diff = lastTime
+      ? (now - new Date(lastTime)) / (1000 * 60)
+      : Infinity;
 
-    let status = bin.status; // 👈 default from DB
+    let status = bin.status;
 
     if ((latest?.fill_level ?? bin.filled) >= 100) {
       status = "Full";
@@ -200,12 +208,14 @@ export const getAllBins = async () => {
       ...bin.toObject(),
       filled: latest?.fill_level ?? bin.filled,
       status,
-      totalClearedAmount: (bin.clearedCount * bin.capacity)/1000,
-      lastReportedAt: lastTime
-
+      totalClearedAmount: (bin.clearedCount * bin.capacity) / 1000,
+      lastReportedAt: lastTime,
     };
   });
+
+  return { bins: formattedBins, total };
 };
+
 
 // -------------------------
 // CRUD

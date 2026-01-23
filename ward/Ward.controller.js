@@ -20,13 +20,16 @@ export const createWard = async (req, res) => {
 
 export const getWards = async (req, res) => {
   try {
-    const wards = await WardService.getWards();
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 8;
+
+    const result = await WardService.getWards(page, limit);
 
     res.status(200).json({
       success: true,
-      data: wards,
+      data: result.wards,
+      pagination: result.pagination,
     });
-
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -34,6 +37,7 @@ export const getWards = async (req, res) => {
     });
   }
 };
+
 
 
 // ------ Ward Report Controller ------

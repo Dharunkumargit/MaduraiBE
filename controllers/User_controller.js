@@ -20,19 +20,25 @@ export const addUser = async (req, res) => {
 
 export const getUser = async (req, res) => {
   try {
-    const users = await UserService.getUser();
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 8;
+
+    const result = await UserService.getUser(page, limit);
+
     res.status(200).json({
-      message: "Users fetched successfully",
-      count: users.length,
-      data: users,
+      success: true,
+      data: result.users,
+      pagination: result.pagination,
     });
   } catch (err) {
     res.status(500).json({
+      success: false,
       message: "Internal Server Error",
       error: err.message,
     });
   }
 };
+
 
 export const getEmployees = async (req, res) => {
   const employees = await UserService.getEmployees();
@@ -51,6 +57,7 @@ export const loginUser = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        phonenumber: user.phonenumber,
       },
     });
   } catch (error) {

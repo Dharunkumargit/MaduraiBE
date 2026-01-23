@@ -52,8 +52,27 @@ export const loginUser = async ({ email, password }) => {
 };
 
 /* ================= GET USERS ================= */
-export const getUser = async () => {
-  return await User.find().select("-password");
+export const getUser = async (page = 1, limit = 8) => {
+  const skip = (page - 1) * limit;
+
+  const totalItems = await User.countDocuments();
+
+  const users = await User.find()
+    .select("-password")
+    .sort({  })
+    .skip(skip)
+    .limit(limit)
+    .lean();
+
+  return {
+    users,
+    pagination: {
+      totalItems,
+      totalPages: Math.ceil(totalItems / limit),
+      currentPage: page,
+      itemsPerPage: limit,
+    },
+  };
 };
 
 

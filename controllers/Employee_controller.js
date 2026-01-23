@@ -31,18 +31,22 @@ export const createEmployee = async (req, res) => {
     }
   };
   
-  export const getEmployees = async (req, res, next) => {
-    try {
-      const data = await EmployeeService.getEmployees();
-      res.status(200).json({
-        success: true,
-        count: data.length,
-        data,
-      });
-    } catch (error) {
-      next(error);
-    }
-  };
+ export const getEmployees = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    const result = await EmployeeService.getEmployees(page, limit);
+
+    res.status(200).json({
+      success: true,
+      data: result.employees,
+      pagination: result.pagination,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
   
 

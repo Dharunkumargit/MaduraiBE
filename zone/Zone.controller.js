@@ -11,8 +11,18 @@ export const createZone = async (req, res) => {
 
 export const getZones = async (req, res) => {
   try {
-    const zones = await ZoneService.getZones();
-    res.status(200).json({ success: true, data: zones });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 8;
+
+    const result = await ZoneService.getZones(page, limit);
+
+    res.status(200).json({
+      success: true,
+      data: result.zones,
+      totalItems: result.totalItems,
+      totalPages: result.totalPages,
+      currentPage: page,
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

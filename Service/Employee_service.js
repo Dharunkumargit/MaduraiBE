@@ -19,8 +19,26 @@ export const createEmployee = async (data) => {
   return await Employee.create(data);
 };
 
-export const getEmployees = async () => {
-  return await Employee.find().sort({ createdAt: -1 });
+export const getEmployees = async (page = 1, limit = 10) => {
+  const skip = (page - 1) * limit;
+
+  const totalItems = await Employee.countDocuments();
+
+  const employees = await Employee.find()
+    .sort({  })
+    .skip(skip)
+    .limit(limit)
+    .lean();
+
+  return {
+    employees,
+    pagination: {
+      totalItems,
+      totalPages: Math.ceil(totalItems / limit),
+      currentPage: page,
+      itemsPerPage: limit,
+    },
+  };
 };
 
 export const generateEmployeeWiseReport = async (fromDate, toDate) => {
