@@ -119,8 +119,8 @@ export class BinFullEventService {
           zone: { $first: "$zone" },
           ward: { $first: "$ward" },
           tonsCleared: { $sum: "$analytics.totalTonnageCleared" },
-          totalClearTimeMins: { $sum: "$analytics.totalClearTimeMins" }, // ✅ TOTAL TIME
-          clearedEvents: { $sum: "$analytics.clearedEvents" }, // ✅ COUNT
+          totalClearTimeMins: { $sum: "$analytics.totalClearTimeMins" }, 
+          clearedEvents: { $sum: "$analytics.clearedEvents" }, 
         },
       },
       {

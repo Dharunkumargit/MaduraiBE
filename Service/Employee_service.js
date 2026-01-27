@@ -1,8 +1,18 @@
 import Employee from "../models/Employee_Schema.js";
-
+import IdcodeServices from "../idcode/idcode.service.js";
 export const createEmployee = async (data) => {
   const exists = await Employee.findOne({   phonenumber: data.phonenumber });
   if (exists) throw new Error("Phone number already exists!");
+
+  
+  const emp_id = await IdcodeServices.generateCode("EMPLOYEE");
+
+  if (!emp_id) {
+    throw new Error("Failed to generate employee ID");
+  }
+
+  
+  data.emp_id = emp_id; 
 
   return await Employee.create(data);
 };
@@ -55,7 +65,30 @@ export const deleteEmployee = async (id) => {
     throw new Error("Employee not found");
   }
 
-  await Employee.findByIdAndDelete(id);
+  
 
+  return employee;
+};
+
+export const updateEmployee = async (id, data) => {
+  // Find the employee
+  const employee = await Employee.findById(id);
+  if (!employee) throw new Error("Employee not found");
+
+  // Check if new phone/email already exists for another employee
+  if (data.phonenumber && data.phonenumber !== employee.phonenumber) {
+    const phoneExists = await Employee.findOne({ phonenumber: data.phonenumber });
+    if (phoneExists) throw new Error("Phone number already exists!");
+  }
+
+  if (data.emailid && data.emailid !== employee.emailid) {
+    const emailExists = await Employee.findOne({ emailid: data.emailid });
+    if (emailExists) throw new Error("Email already exists!");
+  }
+
+  // Update the employee
+  Object.assign(employee, data);
+
+  await employee.save();
   return employee;
 };

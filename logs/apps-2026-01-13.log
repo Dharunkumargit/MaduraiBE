@@ -1,6 +1,0 @@
-{"level":"error","message":"Error while getting all roles: getaddrinfo ENOTFOUND ac-pvq5p3s-shard-00-00.ztslkpq.mongodb.net","timestamp":"2026-01-12T20:18:41.402Z"}
-{"level":"error","message":"Error getting all roles: getaddrinfo ENOTFOUND ac-pvq5p3s-shard-00-00.ztslkpq.mongodb.net","timestamp":"2026-01-12T20:18:41.487Z"}
-{"level":"error","message":"Error while getting all roles: getaddrinfo ENOTFOUND ac-pvq5p3s-shard-00-00.ztslkpq.mongodb.net","timestamp":"2026-01-13T04:19:51.268Z"}
-{"level":"error","message":"Error getting all roles: getaddrinfo ENOTFOUND ac-pvq5p3s-shard-00-00.ztslkpq.mongodb.net","timestamp":"2026-01-13T04:19:51.269Z"}
-{"level":"error","message":"Error while getting all roles: getaddrinfo ENOTFOUND ac-pvq5p3s-shard-00-00.ztslkpq.mongodb.net","timestamp":"2026-01-13T04:20:11.274Z"}
-{"level":"error","message":"Error getting all roles: getaddrinfo ENOTFOUND ac-pvq5p3s-shard-00-00.ztslkpq.mongodb.net","timestamp":"2026-01-13T04:20:11.274Z"}
