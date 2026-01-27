@@ -1,14 +1,14 @@
 import express from "express";
-import { createRole, deleteRoleById, getAllRoles, getRoleById,  updateRoleById } from "../roles/Role.controller.js";
+import { createRole, deleteRole, getAllRoles, getRoleById,  updateRole,   } from "../roles/Role.controller.js";
 
 
 const router = express.Router();
 
 router.post("/addrole", createRole);
 router.get("/getroles", getAllRoles);
-router.get("/getrolebyid", getRoleById);
-router.put("/updaterolebyid", updateRoleById);
-router.delete("/deleterolebyid/:id", deleteRoleById);
+router.get("/getrolebyid/:roleId", getRoleById);
+router.put("/updaterolebyid", updateRole);
+router.delete("/deleterolebyid/:id", deleteRole);
 
 
 export default router;

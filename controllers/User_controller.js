@@ -18,24 +18,11 @@ export const addUser = async (req, res) => {
 
 export const getUser = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 8;
-    const skip = (page - 1) * limit;
-
-    const { users, totalItems } = await UserService.getUser({
-      skip,
-      limit,
-    });
-
+    const users = await UserService.getUser();
     res.status(200).json({
       message: "Users fetched successfully",
+      count: users.length,
       data: users,
-      pagination: {
-        totalItems,
-        currentPage: page,
-        itemsPerPage: limit,
-        totalPages: Math.ceil(totalItems / limit),
-      },
     });
   } catch (err) {
     res.status(500).json({
@@ -44,7 +31,6 @@ export const getUser = async (req, res) => {
     });
   }
 };
-
 
 export const getEmployees = async (req, res) => {
   const employees = await UserService.getEmployees();

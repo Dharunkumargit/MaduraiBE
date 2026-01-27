@@ -23,6 +23,10 @@ router.get('/bin/:id/status', async (req, res) => {
   res.json({ success: true, status });
 });
 
+
+
+
+// 🔥 MAGIC SINGLE ENDPOINT
 router.get('/role/:role', async (req, res) => {
   try {
     const { role } = req.params;

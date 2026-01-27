@@ -297,13 +297,7 @@ export const syncOutsourceBins = async () => {
 
       const diff = (now - bin.lastReportedAt) / (1000 * 60);
 
-      if (bin.filled >= 75) {
-        console.log(`🚨 CHECKING ESCALATION: ${bin.binid} ${bin.filled}%`);
-        const roles = await EscalationService.processBinEscalation(bin._id);
-        if (roles.length > 0) {
-          console.log(`✅ ALERT: ${bin.binid} → ${roles.join(", ")}`);
-        }
-      }
+
 
       // 🔥 PROTECT FULL BINS - NO TIMEOUT!
       if (bin.filled >= 100) {
@@ -317,9 +311,22 @@ export const syncOutsourceBins = async () => {
         await bin.save();
         console.log(`⚪ ${bin.binid}: ${diff.toFixed(1)}m → Inactive`);
       }
+       await bin.save();
     }
+// 🔥 STEP 2: Fresh escalation check
+console.log("🚨 Escalation sweep...");
+const escalatedBins = await Bin.find({ filled: { $gte: 75 } }).sort({ filled: -1 });
+for (const bin of escalatedBins) {
+  console.log(`🚨 CHECKING: ${bin.binid} ${bin.filled}% (Zone:${bin.zone}, Ward:${bin.ward})`);
+  const roles = await EscalationService.processBinEscalation(bin._id);
+  if (roles.length > 0) {
+    console.log(`✅ ESCALATED: ${bin.binid} → ${roles.join(", ")}`);
+  } else {
+    console.log(`ℹ️ No new escalation for ${bin.binid}`);
+  }
+}
 
-    console.log("✅ Sync completed successfully!");
+console.log("✅ Sync + Escalation completed!");
   } catch (error) {
     console.error("❌ Sync failed:", error.message);
   }
@@ -328,21 +335,28 @@ export const syncOutsourceBins = async () => {
 // ================================
 // API FUNCTIONS
 // ================================
-export const getAllBins = async ({ skip, limit }) => {
+export const getAllBinsPaginated = async (page = 1, limit = 9) => {
+  const skip = (page - 1) * limit;
+
+  const totalItems = await Bin.countDocuments();
+
   const bins = await Bin.find()
     .sort({  })
     .skip(skip)
     .limit(limit);
 
-  const totalItems = await Bin.countDocuments();
-
-  const formattedBins = bins.map((bin) => ({
-    ...bin.toObject(),
-    totalTonsCleared: litersToTons(bin.totalClearedAmount || 0),
-    isActive: bin.status === "Active",
-  }));
-
-  return { bins: formattedBins, totalItems };
+  return {
+    data: bins.map((bin) => ({
+      ...bin.toObject(),
+      totalTonsCleared: litersToTons(bin.totalClearedAmount || 0),
+      isActive: bin.status === "Active",
+    })),
+    pagination: {
+      totalItems,
+      currentPage: page,
+      totalPages: Math.ceil(totalItems / limit),
+    },
+  };
 };
 
 export const getBinDashboard = async (binid) => {

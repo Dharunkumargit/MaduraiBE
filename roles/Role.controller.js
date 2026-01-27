@@ -1,43 +1,33 @@
-import logger from "../config/logger.js";
-import IdcodeServices from "../idcode/idcode.service.js";
-import RoleService from "../roles/Role.service.js";
-
+import RoleService from './Role.service.js';
 
 export const createRole = async (req, res) => {
   try {
-    const { role_name, accessLevels, status, created_by_user } = req.body;
-
-    if (!role_name) {
-      return res.status(400).json({ message: "Role name required" });
-    }
-    const cleanAccessLevels = accessLevels.map(a => ({
-      feature: a.feature,
-      permissions: a.permissions.filter(p => p !== "All")
-    }));
-    if (!accessLevels || accessLevels.length === 0) {
-      return res.status(400).json({ message: "Access levels required" });
-    }
-
-    const role_id = await IdcodeServices.generateCode("RoleAccess");
-    if (!role_id) throw new Error("Failed to generate role ID");
-
-    const role = await RoleService.addRole({
-      role_id,
-      role_name,
-      accessLevels: cleanAccessLevels,
-      status,
-      created_by_user,
-    });
-
-    res.status(201).json({
-      status: true,
-      message: "Role Acces level created successfully",
-      data: role,
+    const role = await RoleService.addRole(req.body);
+    res.status(201).json({ 
+      success: true, 
+      message: 'Role created successfully',
+      data: role 
     });
   } catch (error) {
-    logger.error(`Error creating role Acces level: ${error.message}`);
+    res.status(400).json({ success: false, error: error.message });
+  }
+};
+
+export const getAllRoles = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 8;
+
+    const result = await RoleService.getAllRoles(page, limit);
+
+    res.status(200).json({
+      success: true,
+      data: result.data,
+      pagination: result.pagination,
+    });
+  } catch (error) {
     res.status(500).json({
-      status: false,
+      success: false,
       message: error.message,
     });
   }
@@ -45,70 +35,53 @@ export const createRole = async (req, res) => {
 
 export const getRoleById = async (req, res) => {
   try {
-    const { roleId } = req.query;
-    if (!roleId) {
-      return res.status(400).json({ message: "roleId is required" });
-    }
-
+    const { roleId } = req.params;
     const role = await RoleService.getRolesById(roleId);
-
-    res.status(200).json({ status: true, data: role });
+    res.json({ success: true, data: role });
   } catch (error) {
-    logger.error(`Error getting role: ${error.message}`);
-    res.status(404).json({ status: false, message: error.message });
+    res.status(404).json({ success: false, error: error.message });
   }
 };
 
-export const getAllRoles = async (req, res) => {
+export const updateRole = async (req, res) => {
   try {
-    const roles = await RoleService.getAllRoles();
-    res.status(200).json({
-      status: true,
-      data: roles,
+    const { role_id } = req.query;
+    const role = await RoleService.updateRole(role_id, req.body);
+    res.json({ 
+      success: true, 
+      message: 'Role updated successfully',
+      data: role 
     });
   } catch (error) {
-    logger.error(`Error getting all roles: ${error.message}`);
-    res.status(500).json({ message: error.message });
+    res.status(400).json({ success: false, error: error.message });
   }
 };
 
-export const updateRoleById = async (req, res) => {
-    const { roleId } = req.query;
-    try {
-      const update = req.body;
-      const updated = await RoleService.updateRole(roleId, update);
-      res.status(200).json({
-        status: true,
-        message: "Role updated successfully",
-        data: updated,
-      });
-    } catch (error) {
-      logger.error(`Error updating role: ${error.message}`);
-      res.status(500).json({ message: "Error updating role" + error });
-    }
-  };
-export const deleteRoleById = async (req, res) => {
-    try {
-      const { id } = req.params;   
-  
-      const deleted = await RoleService.deleteRoleByMongoId(id);
-  
-      if (!deleted) {
-        return res.status(404).json({
-          status: false,
-          message: "Role not found",
-        });
-      }
-  
-      res.status(200).json({
-        status: true,
-        message: "Role deleted successfully",
-      });
-    } catch (error) {
-      logger.error(`Error deleting role: ${error.message}`);
-      res.status(404).json({
-        status: false,
-        message: error.message,
-      });
-    }
-  };
+export const deleteRole = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await RoleService.deleteRoleByMongoId(id);
+    res.json({ 
+      success: true, 
+      message: 'Role deleted successfully',
+      data: result 
+    });
+  } catch (error) {
+    res.status(404).json({ success: false, error: error.message });
+  }
+};
+
+// Bonus: Assign role to employee
+export const assignRoleToEmployee = async (req, res) => {
+  try {
+    const { empId, roleId } = req.params;
+    const employee = await RoleService.assignRoleToEmployee(empId, roleId);
+    res.json({ 
+      success: true, 
+      message: 'Role assigned to employee successfully',
+      data: employee 
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+};
