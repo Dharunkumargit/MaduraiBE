@@ -40,9 +40,27 @@ export const createBin = async (req, res) => {
 };
 
 export const getAllBins = async (req, res) => {
-  
-  const bins = await BinService.getAllBins();
-  res.json({ success: true, total: bins.length, data: bins });
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 9;
+    const skip = (page - 1) * limit;
+
+    const { bins, totalItems } =
+      await BinService.getAllBins({ skip, limit });
+
+    res.json({
+      success: true,
+      data: bins,
+      pagination: {
+        totalItems,
+        currentPage: page,
+        itemsPerPage: limit,
+        totalPages: Math.ceil(totalItems / limit),
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
 
 export const getBin = async (req, res) => {
@@ -88,3 +106,4 @@ export const getBinReport = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+

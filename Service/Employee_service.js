@@ -17,8 +17,15 @@ export const createEmployee = async (data) => {
   return await Employee.create(data);
 };
 
-export const getEmployees = async () => {
-  return await Employee.find().sort({ createdAt: -1 });
+export const getEmployees = async ({ skip, limit }) => {
+  const employees = await Employee.find()
+    .sort({  })
+    .skip(skip)
+    .limit(limit);
+
+  const totalItems = await Employee.countDocuments();
+
+  return { employees, totalItems };
 };
 
 export const generateEmployeeWiseReport = async (fromDate, toDate) => {
@@ -59,13 +66,11 @@ export const generateEmployeeWiseReport = async (fromDate, toDate) => {
 };
 
 export const deleteEmployee = async (id) => {
-  const employee = await Employee.findById(id);
+  const employee = await Employee.findByIdAndDelete(id);
 
   if (!employee) {
     throw new Error("Employee not found");
   }
-
-  
 
   return employee;
 };

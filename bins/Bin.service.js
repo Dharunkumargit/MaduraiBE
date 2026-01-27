@@ -6,7 +6,7 @@ import axios from "axios";
 import EscalationService from "../Service/Escalation_service.js";
 
 let binCounter = 0;
-const USE_DUMMY_DATA = false;
+const USE_DUMMY_DATA = true;
 // ================================
 // DATE UTILITIES - BULLETPROOF
 // ================================
@@ -39,7 +39,7 @@ const getDummyOutsourceData = () => [
     },
     latest_2: {
       timestamp: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-      fill_level: 100, // ✅ Triggers FULL event
+      fill_level: 75, // ✅ Triggers FULL event
       image_url: "https://dummy.com/bin100.jpg",
     },
   },
@@ -328,13 +328,21 @@ export const syncOutsourceBins = async () => {
 // ================================
 // API FUNCTIONS
 // ================================
-export const getAllBins = async () => {
-  const bins = await Bin.find().sort({ createdAt: -1 });
-  return bins.map((bin) => ({
+export const getAllBins = async ({ skip, limit }) => {
+  const bins = await Bin.find()
+    .sort({  })
+    .skip(skip)
+    .limit(limit);
+
+  const totalItems = await Bin.countDocuments();
+
+  const formattedBins = bins.map((bin) => ({
     ...bin.toObject(),
     totalTonsCleared: litersToTons(bin.totalClearedAmount || 0),
     isActive: bin.status === "Active",
   }));
+
+  return { bins: formattedBins, totalItems };
 };
 
 export const getBinDashboard = async (binid) => {
@@ -425,3 +433,19 @@ export const initializeBinService = async () => {
   );
 };
 // 🔥 BULLETPROOF VERSION - Run this ONCE
+export const updateBinService = async (id, data) => {
+  if (data.filled >= 100) {
+    data.status = "Full";
+  } else {
+    data.status = "Active";
+  }
+
+  data.lastcollected = new Date();
+
+  return Bin.findByIdAndUpdate(id, data, {
+    new: true,
+    runValidators: true,
+  });
+};
+
+export const deleteBin = (id) => Bin.findByIdAndDelete(id);

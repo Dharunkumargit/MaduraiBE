@@ -32,17 +32,28 @@ export const createEmployee = async (req, res) => {
   };
   
   export const getEmployees = async (req, res, next) => {
-    try {
-      const data = await EmployeeService.getEmployees();
-      res.status(200).json({
-        success: true,
-        count: data.length,
-        data,
-      });
-    } catch (error) {
-      next(error);
-    }
-  };
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 9;
+    const skip = (page - 1) * limit;
+
+    const { employees, totalItems } =
+      await EmployeeService.getEmployees({ skip, limit });
+
+    res.status(200).json({
+      success: true,
+      data: employees,
+      pagination: {
+        totalItems,
+        currentPage: page,
+        itemsPerPage: limit,
+        totalPages: Math.ceil(totalItems / limit),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
   
 

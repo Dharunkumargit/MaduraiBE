@@ -45,8 +45,16 @@ export const loginUser = async ({ email, password }) => {
 };
 
 /* ================= GET USERS ================= */
-export const getUser = async () => {
-  return await User.find().select("-password");
+export const getUser = async ({ skip, limit }) => {
+  const users = await User.find()
+    .select("-password")
+    .skip(skip)
+    .limit(limit)
+    .sort({ createdAt: -1 });
+
+  const totalItems = await User.countDocuments();
+
+  return { users, totalItems };
 };
 
 

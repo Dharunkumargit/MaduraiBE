@@ -124,6 +124,108 @@ class EscalationService {
 
     return rolesToNotify;
   }
+
+  static async getRoleEscalations(role) {
+  const roleConfig = {
+    // Percentage roles
+    'Ward Supervisor': { 
+      type: 'fill', 
+      minFill: 75, 
+      maxFill: 89, 
+      threshold: '75%',
+      level: '75%'
+    },
+    'SI - Sanitary Inspectors': { 
+      type: 'fill', 
+      minFill: 90, 
+      maxFill: 99, 
+      threshold: '90%', 
+      level: '90%'
+    },
+    'Sanitary Office': { 
+      type: 'fill', 
+      minFill: 100, 
+      maxFill: 100, 
+      threshold: '100%',
+      level: '100%'
+    },
+    // 🔥 FIXED L1-L4 - Added role field matching
+    'ACHO': { 
+      type: 'time', 
+      level: 'L1',
+      displayLevel: 'L1 (21+ mins)'
+    },
+    'CHO': { 
+      type: 'time', 
+      level: 'L2',
+      displayLevel: 'L2 (31+ mins)'
+    },
+    'Deputy Commissioner': { 
+      type: 'time', 
+      level: 'L3',
+      displayLevel: 'L3 (51+ mins)'
+    },
+    'Commissioner': { 
+      type: 'time', 
+      level: 'L4',
+      displayLevel: 'L4 (61+ mins)'
+    }
+  };
+
+  const config = roleConfig[role];
+  if (!config) throw new Error(`Role ${role} not configured`);
+
+  let query = {};
+  
+  if (config.type === 'time') {
+    // 🔥 FIXED: Match BOTH level AND role in timeEscalations
+    query = {
+      'escalation.timeEscalations': {
+        $elemMatch: { 
+          level: config.level, 
+          role: role  // ← CRITICAL: Match exact role
+        }
+      }
+    };
+  } else {
+    query = {
+      [`escalation.thresholdsHit.${config.threshold}`]: { $exists: true },
+      filled: { $gte: config.minFill, $lte: config.maxFill }
+    };
+  }
+
+  console.log(`🔍 ${role} query:`, JSON.stringify(query));
+
+  const bins = await Bin.find(query)
+    .select('binid filled zone ward status escalation')
+    .sort({ filled: -1 });
+
+  const transformedBins = bins.map(bin => {
+    const roleEscalation = config.type === 'time' 
+      ? bin.escalation.timeEscalations?.find(e => e.level === config.level)
+      : bin.escalation.thresholdsHit?.[config.threshold];
+    
+    return {
+      binid: bin.binid,
+      filled: bin.filled,
+      zone: bin.zone,
+      ward: bin.ward,
+      status: bin.status,
+      escalatedAt: roleEscalation?.time,
+      notified: roleEscalation?.notified || [role],
+      priority: bin.filled >= 90 ? 'HIGH' : 'MEDIUM'
+    };
+  });
+
+  return {
+    role,
+    level: config.displayLevel || config.level || config.threshold,  // ✅ FIXED LEVEL
+    bins: transformedBins,
+    total: transformedBins.length,
+    critical: transformedBins.filter(b => b.filled >= 90).length,
+    timestamp: new Date()
+  };
+}
 }
 
 export default EscalationService;
