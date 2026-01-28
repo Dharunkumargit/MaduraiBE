@@ -138,7 +138,7 @@ export const syncOutsourceBins = async () => {
       console.log("🔸 DUMMY data (guaranteed array)");
     } else {
       const response = await axios.get(
-        "http://ec2-54-157-168-45.compute-1.amazonaws.com:8000/latest",
+        "http://ec2-13-126-159-151.ap-south-1.compute.amazonaws.com:8001/latest_flat",
         { timeout: 10000 },
       );
       data = Array.isArray(response.data) ? response.data : [response.data];
@@ -407,6 +407,8 @@ export const updateFillLevel = async (binId, fillLevel) => {
     { new: true },
   );
 };
+
+
 
 export const getCriticalBins = async () => {
   return await Bin.find({
