@@ -14,7 +14,12 @@ const ZoneSchema = new mongoose.Schema(
         alertTime: Date,
         clearedTime: Date,
       }
-    ]
+    ],
+    status: {
+      type: String,
+      enum: ["Active", "Inactive"],
+      default: "Active",
+    },
 
   },
   { timestamps: true }

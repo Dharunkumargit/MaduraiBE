@@ -13,6 +13,11 @@ const WardSchema = new mongoose.Schema(
       trim: true,
       unique: true, 
     },
+    status: {
+      type: String,
+      enum: ["Active", "Inactive"],
+      default: "Active",
+    },
 
   },
   { timestamps: true }

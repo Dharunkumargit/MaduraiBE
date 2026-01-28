@@ -5,8 +5,8 @@ import { getLocationFromLatLong } from "../utils/getLocationFromLatLong.js";
 import axios from "axios";
 import EscalationService from "../Service/Escalation_service.js";
 
-let binCounter = 0;
-const USE_DUMMY_DATA = true;
+let binCounter = 1;
+const USE_DUMMY_DATA = false;
 // ================================
 // DATE UTILITIES - BULLETPROOF
 // ================================
