@@ -272,7 +272,7 @@ export const syncOutsourceBins = async () => {
       bin.history = history;
 
       const diffMins = (new Date() - latest.timestamp) / (1000 * 60);
-      if (latest.fill_level >= 100) bin.status = "Full";
+      if (latest.fill_level >= 100) bin.status = "Inactive";
       else if (diffMins > 30) bin.status = "Inactive";
       else bin.status = "Active";
 
