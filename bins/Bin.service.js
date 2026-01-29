@@ -272,7 +272,7 @@ export const syncOutsourceBins = async () => {
       bin.history = history;
 
       const diffMins = (new Date() - latest.timestamp) / (1000 * 60);
-      if (latest.fill_level >= 100) bin.status = "Inactive";
+      if (latest.fill_level >= 100) bin.status = "Active";
       else if (diffMins > 30) bin.status = "Inactive";
       else bin.status = "Active";
 
@@ -350,7 +350,7 @@ export const getAllBinsPaginated = async (page = 1, limit = 9) => {
   }, {});
 
   const bins = await Bin.find()
-    .sort({ createdAt: -1 })
+    .sort({  })
     .skip(skip)
     .limit(limit);
 
@@ -461,4 +461,20 @@ export const initializeBinService = async () => {
     "Available: syncOutsourceBins(), startLiveMonitor(), getAllBins()",
   );
 };
-// 🔥 BULLETPROOF VERSION - Run this ONCE
+
+export const updateBinService = async (id, data) => {
+  if (data.filled >= 100) {
+    data.status = "Full";
+  } else {
+    data.status = "Active";
+  }
+
+  data.lastcollected = new Date();
+
+  return Bin.findByIdAndUpdate(id, data, {
+    new: true,
+    runValidators: true,
+  });
+};
+
+export const deleteBin = (id) => Bin.findByIdAndDelete(id);
