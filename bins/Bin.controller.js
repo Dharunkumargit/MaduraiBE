@@ -41,15 +41,17 @@ export const createBin = async (req, res) => {
 
 export const getAllBins = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 9;
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 9;
 
     const result = await BinService.getAllBinsPaginated(page, limit);
 
     res.status(200).json({
       success: true,
       data: result.data,
-      pagination: result.pagination,
+      totalPages: result.pagination.totalPages,
+      currentPage: result.pagination.currentPage,
+      totalItems: result.pagination.totalItems,
     });
   } catch (error) {
     res.status(500).json({

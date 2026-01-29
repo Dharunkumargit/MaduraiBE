@@ -27,11 +27,11 @@ const binSchema = new mongoose.Schema(
 
     binid: { type: String, unique: true, required: true },
 
-    location: String,
+    location: {type: String},
 
     status: {
       type: String,
-      enum: ["Active", "Inactive", "Full"],
+      enum: ["Active", "Inactive" , "Full"],
       default: "Active",
     },
 

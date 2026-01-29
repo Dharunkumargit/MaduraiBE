@@ -206,25 +206,35 @@ if (fillLevel >= 75) {
     console.log(`🔍 ${role} query:`, JSON.stringify(query));
 
     const bins = await Bin.find(query)
-      .select('binid filled zone ward status escalation')
+      .select('binid filled zone ward street status escalation')
       .sort({ filled: -1 });
 
+    
+
     const transformedBins = bins.map(bin => {
-      const roleEscalation = config.type === 'time' 
-        ? bin.escalation.timeEscalations?.find(e => e.level === config.level)
-        : bin.escalation.thresholdsHit?.[config.threshold];
-      
-      return {
-        binid: bin.binid,
-        filled: bin.filled,
-        zone: bin.zone,
-        ward: bin.ward,
-        status: bin.status,
-        escalatedAt: roleEscalation?.time,
-        notified: roleEscalation?.notified || [role],
-        priority: bin.filled >= 90 ? 'HIGH' : 'MEDIUM'
-      };
-    });
+  const roleEscalation =
+    config.type === 'time'
+      ? bin.escalation.timeEscalations?.find(e => e.level === config.level)
+      : bin.escalation.thresholdsHit?.[config.threshold];
+
+  return {
+    binid: bin.binid,
+
+    // ✅ normalize arrays → string
+    zone: Array.isArray(bin.zone) ? bin.zone.join(', ') : bin.zone,
+    ward: Array.isArray(bin.ward) ? bin.ward.join(', ') : bin.ward,
+
+    // ✅ LOCATION FIX
+    street: bin.street ,
+
+    filled: bin.filled,
+    status: bin.status,
+
+    escalatedAt: roleEscalation?.time,
+    notified: roleEscalation?.notified || [role],
+    priority: bin.filled >= 90 ? 'HIGH' : 'MEDIUM'
+  };
+});
 
     return {
       role,

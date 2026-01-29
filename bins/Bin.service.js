@@ -5,7 +5,7 @@ import { getLocationFromLatLong } from "../utils/getLocationFromLatLong.js";
 import axios from "axios";
 import EscalationService from "../Service/Escalation_service.js";
 
-let binCounter = 1;
+let binCounter = 0;
 const USE_DUMMY_DATA = false;
 // ================================
 // DATE UTILITIES - BULLETPROOF
@@ -39,7 +39,7 @@ const getDummyOutsourceData = () => [
     },
     latest_2: {
       timestamp: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-      fill_level: 75, // ✅ Triggers FULL event
+      fill_level: 100, // ✅ Triggers FULL event
       image_url: "https://dummy.com/bin100.jpg",
     },
   },
@@ -158,44 +158,37 @@ export const syncOutsourceBins = async () => {
         continue;
       }
 
-      const history = Object.keys(item)
-        .filter((k) => k.startsWith("latest_"))
-        .map((k) => {
-          const dataPoint = item[k];
-          if (!dataPoint?.timestamp) return null;
-
-          const tsStr = dataPoint.timestamp;
-          console.log(`Parsing: "${tsStr}"`);
+      // 🔥 REPLACE entire history parsing (around line 140)
+      const history = [];
+      for (const key in item) {
+        if (key.startsWith("latest_")) {
+          const dataPoint = item[key];
+          if (!dataPoint?.timestamp) continue;
 
           let ts;
-
-          // 🔥 CHECK IF ALREADY VALID ISO
-          if (tsStr.match(/Z$/)) {
-            ts = new Date(tsStr); // Dummy ISO ✅
-          } else {
-            // 🔥 LIVE FORMAT: T06-26-31 → T06:26:31.000Z
-            const parts = tsStr.split("T");
-            if (parts[1]) {
-              const timeParts = parts[1].split("-");
-              if (timeParts.length === 3) {
-                const fixedTs = `${parts[0]}T${timeParts[0]}:${timeParts[1]}:${timeParts[2]}.000Z`;
-                ts = new Date(fixedTs);
-              }
-            }
+          try {
+            ts = new Date(dataPoint.timestamp); // ✅ "2026-01-28T09:31:12.000+00:00"
+            console.log(
+              `Parsing: "${dataPoint.timestamp}" → ${!isNaN(ts.getTime())}`,
+            );
+          } catch (e) {
+            console.log(`❌ Invalid: ${dataPoint.timestamp}`);
+            continue;
           }
 
-          console.log(`  → Valid: ${!isNaN(ts?.getTime())}`);
+          if (isNaN(ts.getTime())) continue;
 
-          return ts && !isNaN(ts.getTime())
-            ? {
-                timestamp: ts,
-                fill_level: Number(dataPoint.fill_level || 0),
-                image_url: dataPoint.image_url || "",
-              }
-            : null;
-        })
-        .filter(Boolean)
-        .sort((a, b) => b.timestamp - a.timestamp);
+          history.push({
+            timestamp: ts,
+            fill_level: Number(dataPoint.fill_level || 0),
+            image_url: dataPoint.image_url || "",
+          });
+        }
+      }
+
+      history.sort((a, b) => b.timestamp - a.timestamp);
+      const latest = history[0];
+      if (!latest) continue;
 
       // const history = Object.keys(item)
       //   .map((k) => {
@@ -251,7 +244,6 @@ export const syncOutsourceBins = async () => {
 
       // if (!history.length) continue;
 
-      const latest = history[0];
       const prevFill = bin.history?.[0]?.fill_level ?? bin.filled ?? 0;
       const day = getTodayDate(latest.timestamp) || today;
       const capacity = bin.capacity || 400;
@@ -297,8 +289,6 @@ export const syncOutsourceBins = async () => {
 
       const diff = (now - bin.lastReportedAt) / (1000 * 60);
 
-
-
       // 🔥 PROTECT FULL BINS - NO TIMEOUT!
       if (bin.filled >= 100) {
         console.log(`🔴 ${bin.binid}: Full - Protected from timeout`);
@@ -311,22 +301,26 @@ export const syncOutsourceBins = async () => {
         await bin.save();
         console.log(`⚪ ${bin.binid}: ${diff.toFixed(1)}m → Inactive`);
       }
-       await bin.save();
+      await bin.save();
     }
-// 🔥 STEP 2: Fresh escalation check
-console.log("🚨 Escalation sweep...");
-const escalatedBins = await Bin.find({ filled: { $gte: 75 } }).sort({ filled: -1 });
-for (const bin of escalatedBins) {
-  console.log(`🚨 CHECKING: ${bin.binid} ${bin.filled}% (Zone:${bin.zone}, Ward:${bin.ward})`);
-  const roles = await EscalationService.processBinEscalation(bin._id);
-  if (roles.length > 0) {
-    console.log(`✅ ESCALATED: ${bin.binid} → ${roles.join(", ")}`);
-  } else {
-    console.log(`ℹ️ No new escalation for ${bin.binid}`);
-  }
-}
+    // 🔥 STEP 2: Fresh escalation check
+    console.log("🚨 Escalation sweep...");
+    const escalatedBins = await Bin.find({ filled: { $gte: 75 } }).sort({
+      filled: -1,
+    });
+    for (const bin of escalatedBins) {
+      console.log(
+        `🚨 CHECKING: ${bin.binid} ${bin.filled}% (Zone:${bin.zone}, Ward:${bin.ward})`,
+      );
+      const roles = await EscalationService.processBinEscalation(bin._id);
+      if (roles.length > 0) {
+        console.log(`✅ ESCALATED: ${bin.binid} → ${roles.join(", ")}`);
+      } else {
+        console.log(`ℹ️ No new escalation for ${bin.binid}`);
+      }
+    }
 
-console.log("✅ Sync + Escalation completed!");
+    console.log("✅ Sync + Escalation completed!");
   } catch (error) {
     console.error("❌ Sync failed:", error.message);
   }
@@ -338,23 +332,44 @@ console.log("✅ Sync + Escalation completed!");
 export const getAllBinsPaginated = async (page = 1, limit = 9) => {
   const skip = (page - 1) * limit;
 
-  const totalItems = await Bin.countDocuments();
+  const totalBins = await Bin.countDocuments();
+
+  const clearedSummary = await BinFullEvent.aggregate([
+    {
+      $group: {
+        _id: "$binid",
+        totalClearedEvents: { $sum: "$analytics.clearedEvents" },
+        totalTonnageCleared: { $sum: "$analytics.totalTonnageCleared" },
+      },
+    },
+  ]);
+
+  const clearedMap = clearedSummary.reduce((acc, cur) => {
+    acc[cur._id] = cur;
+    return acc;
+  }, {});
 
   const bins = await Bin.find()
-    .sort({  })
+    .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit);
 
-  return {
-    data: bins.map((bin) => ({
+  const formattedBins = bins.map((bin) => {
+    const cleared = clearedMap[bin.binid] || {};
+    return {
       ...bin.toObject(),
-      totalTonsCleared: litersToTons(bin.totalClearedAmount || 0),
-      isActive: bin.status === "Active",
-    })),
+      totalClearedEvents: cleared.totalClearedEvents || 0,
+      totalTonsCleared: cleared.totalTonnageCleared || 0,
+    };
+  });
+
+  return {
+    data: formattedBins,
     pagination: {
-      totalItems,
+      totalItems: totalBins,
+      totalPages: Math.max(1, Math.ceil(totalBins / limit)), // 🔥 FIX
       currentPage: page,
-      totalPages: Math.ceil(totalItems / limit),
+      limit,
     },
   };
 };
@@ -408,8 +423,6 @@ export const updateFillLevel = async (binId, fillLevel) => {
   );
 };
 
-
-
 export const getCriticalBins = async () => {
   return await Bin.find({
     currentFillLevel: { $gte: 75 },
@@ -449,19 +462,3 @@ export const initializeBinService = async () => {
   );
 };
 // 🔥 BULLETPROOF VERSION - Run this ONCE
-export const updateBinService = async (id, data) => {
-  if (data.filled >= 100) {
-    data.status = "Full";
-  } else {
-    data.status = "Active";
-  }
-
-  data.lastcollected = new Date();
-
-  return Bin.findByIdAndUpdate(id, data, {
-    new: true,
-    runValidators: true,
-  });
-};
-
-export const deleteBin = (id) => Bin.findByIdAndDelete(id);
