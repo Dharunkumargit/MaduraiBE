@@ -6,7 +6,7 @@ import axios from "axios";
 import EscalationService from "../Service/Escalation_service.js";
 
 let binCounter = 0;
-const USE_DUMMY_DATA = false;
+const USE_DUMMY_DATA = false; 
 // ================================
 // DATE UTILITIES - BULLETPROOF
 // ================================
@@ -39,7 +39,7 @@ const getDummyOutsourceData = () => [
     },
     latest_2: {
       timestamp: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-      fill_level: 100, // ✅ Triggers FULL event
+      fill_level: 0, // ✅ Triggers FULL event
       image_url: "https://dummy.com/bin100.jpg",
     },
   },
@@ -190,59 +190,7 @@ export const syncOutsourceBins = async () => {
       const latest = history[0];
       if (!latest) continue;
 
-      // const history = Object.keys(item)
-      //   .map((k) => {
-      //     const dataPoint = item[k];
-      //     if (!dataPoint?.timestamp) return null;
-
-      //     const tsStr = dataPoint.timestamp;
-      //     console.log(`Parsing: "${tsStr}"`);
-
-      //     // 🔥 MANUAL PARSING - 100% WORKS
-      //     const parts = tsStr.split('T');
-      //     let fixedTs;
-
-      //     if (parts.length === 2 && parts[1]) {
-      //       const timeParts = parts[1].split('-');  // '06-26-31' → ['06','26','31']
-      //       if (timeParts.length === 3) {
-      //         fixedTs = `${parts[0]}T${timeParts[0]}:${timeParts[1]}:${timeParts[2]}.000Z`;
-      //       } else {
-      //         fixedTs = tsStr + ':00.000Z';
-      //       }
-      //     } else {
-      //       fixedTs = tsStr + ':00.000Z';
-      //     }
-
-      //     const ts = new Date(fixedTs);
-      //     console.log(`  → "${fixedTs}" = ${!isNaN(ts.getTime())}`);
-
-      //     return !isNaN(ts.getTime())
-      //       ? {
-      //           timestamp: ts,
-      //           fill_level: Number(dataPoint.fill_level || 0),
-      //           image_url: dataPoint.image_url || ""
-      //         }
-      //       : null;
-      //   })
-      //   .filter(Boolean)
-      //   .sort((a, b) => b.timestamp - a.timestamp);
-
-      // const history = Object.keys(item)
-      //   .filter((k) => k.startsWith("latest_"))
-      //   .map((k) => {
-      //     const ts = new Date(item[k]?.timestamp);
-      //     return ts && !isNaN(ts.getTime())
-      //       ? {
-      //           timestamp: ts,
-      //           fill_level: Number(item[k].fill_level),
-      //           image_url: item[k].image_url || "",
-      //         }
-      //       : null;
-      //   })
-      //   .filter(Boolean)
-      //   .sort((a, b) => b.timestamp - a.timestamp);
-
-      // if (!history.length) continue;
+      
 
       const prevFill = bin.history?.[0]?.fill_level ?? bin.filled ?? 0;
       const day = getTodayDate(latest.timestamp) || today;
@@ -329,49 +277,69 @@ export const syncOutsourceBins = async () => {
 // ================================
 // API FUNCTIONS
 // ================================
-export const getAllBinsPaginated = async (page = 1, limit = 9) => {
-  const skip = (page - 1) * limit;
+export const getAllBins = async (
+  filterCondition = {},
+  page = 1,
+  limit = 9
+) => {
+  try {
+    const skip = (page - 1) * limit;
 
-  const totalBins = await Bin.countDocuments();
+    // 🔹 TOTAL COUNT
+    const totalItems = await Bin.countDocuments(filterCondition);
 
-  const clearedSummary = await BinFullEvent.aggregate([
-    {
-      $group: {
-        _id: "$binid",
-        totalClearedEvents: { $sum: "$analytics.clearedEvents" },
-        totalTonnageCleared: { $sum: "$analytics.totalTonnageCleared" },
+    // 🔹 PAGINATED QUERY
+    const bins = await Bin.find(filterCondition)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    // 🔹 CLEARED EVENTS AGGREGATION
+    const clearedSummary = await BinFullEvent.aggregate([
+      {
+        $group: {
+          _id: "$binid",
+          totalClearedEvents: { $sum: "$analytics.clearedEvents" },
+          totalTonnageCleared: {
+            $sum: "$analytics.totalTonnageCleared",
+          },
+        },
       },
-    },
-  ]);
+    ]);
 
-  const clearedMap = clearedSummary.reduce((acc, cur) => {
-    acc[cur._id] = cur;
-    return acc;
-  }, {});
+    const clearedMap = clearedSummary.reduce((acc, cur) => {
+      acc[cur._id] = {
+        totalClearedEvents: cur.totalClearedEvents || 0,
+        totalTonnageCleared: cur.totalTonnageCleared || 0,
+      };
+      return acc;
+    }, {});
 
-  const bins = await Bin.find()
-    .sort({  })
-    .skip(skip)
-    .limit(limit);
+    const formattedBins = bins.map((bin) => {
+      const clearedData = clearedMap[bin.binid] || {};
 
-  const formattedBins = bins.map((bin) => {
-    const cleared = clearedMap[bin.binid] || {};
+      return {
+        ...bin.toObject(),
+        totalClearedEvents: clearedData.totalClearedEvents || 0,
+        totalTonsCleared: litersToTons(
+          clearedData.totalTonnageCleared ||
+            bin.totalClearedAmount ||
+            0
+        ),
+        isActive: bin.status === "Active",
+      };
+    });
+
     return {
-      ...bin.toObject(),
-      totalClearedEvents: cleared.totalClearedEvents || 0,
-      totalTonsCleared: cleared.totalTonnageCleared || 0,
-    };
-  });
-
-  return {
-    data: formattedBins,
-    pagination: {
-      totalItems: totalBins,
-      totalPages: Math.max(1, Math.ceil(totalBins / limit)), // 🔥 FIX
+      data: formattedBins,
+      totalItems,
+      totalPages: Math.ceil(totalItems / limit),
       currentPage: page,
-      limit,
-    },
-  };
+    };
+  } catch (error) {
+    console.error("❌ BinService error:", error);
+    throw error;
+  }
 };
 
 export const getBinDashboard = async (binid) => {
@@ -461,20 +429,4 @@ export const initializeBinService = async () => {
     "Available: syncOutsourceBins(), startLiveMonitor(), getAllBins()",
   );
 };
-
-export const updateBinService = async (id, data) => {
-  if (data.filled >= 100) {
-    data.status = "Full";
-  } else {
-    data.status = "Active";
-  }
-
-  data.lastcollected = new Date();
-
-  return Bin.findByIdAndUpdate(id, data, {
-    new: true,
-    runValidators: true,
-  });
-};
-
-export const deleteBin = (id) => Bin.findByIdAndDelete(id);
+// 🔥 BULLETPROOF VERSION - Run this ONCE

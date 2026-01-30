@@ -1,34 +1,38 @@
 // controllers/dashboardController.js
-import { DashboardService } from './Dashboard.service.js';
+import { DashboardService } from './Dashboard.service.js'; // 🔥 ADD THIS
 
 export const getDashboardData = async (req, res) => {
   try {
-    console.log('🔥 LIVE Dashboard - 7 Parallel Queries');
+    console.log('🔥 LIVE Dashboard - 8 Parallel Queries');
     
-    const [stats, topZones, topWards, topLocations, escalations, monthlyZones, todayZones] = await Promise.all([
+    const [stats, topZones, topWards, topLocations, monthlyZones, todayZones, escalationCounts] = await Promise.all([
       DashboardService.getDashboardStats(),
       DashboardService.getZoneWiseFullBins(),
       DashboardService.getWardWiseFullBins(),
       DashboardService.getTopLocations?.() || [],
-      DashboardService.getEscalationLevels(),
       DashboardService.getMonthlyZoneTons?.() || [],
-      DashboardService.getTodayZoneTons?.() || []
+      DashboardService.getTodayZoneTons?.() || [],
+      DashboardService.getEscalationLevels()  // 🔥 NEW
     ]);
 
-    console.log('📊 DATA SUMMARY:', {
-      zones: topZones.length,
-      wards: topWards.length,
-      '100% bins total': stats.fillLevels?.hundred || 0
-    });
+    // 🔥 FORMAT ESCALATIONS FOR FRONTEND
+    const escalations = [
+      { level: 1, count: escalationCounts.L1 || 0 },
+      { level: 2, count: escalationCounts.L2 || 0 },
+      { level: 3, count: escalationCounts.L3 || 0 },
+      { level: 4, count: escalationCounts.L4 || 0 }
+    ];
+
+   
 
     res.json({
       success: true,
       data: {
         stats,
-        topZones,    // [{ _id: "Zone A", fullBinsCount: 5 }]
-        topWards,    // [{ _id: "Ward 1", fullBinsCount: 3 }]
+        topZones,
+        topWards,
         topLocations: topLocations || [],
-        escalations,
+        escalations,        // 🔥 YOUR FRONTEND EXPECTS THIS
         monthlyZones: monthlyZones || [],
         todayZones: todayZones || []
       }
@@ -37,8 +41,7 @@ export const getDashboardData = async (req, res) => {
     console.error('❌ Dashboard Error:', error);
     res.status(500).json({ 
       success: false, 
-      error: error.message,
-      debug: 'Check console logs for details'
+      error: error.message 
     });
   }
 };

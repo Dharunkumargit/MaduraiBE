@@ -40,3 +40,4 @@ cron.schedule('* * * * *', async () => {
 
 console.log('✅ Escalation Cron Started!');
 
+// Every 30 seconds for testing

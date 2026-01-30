@@ -39,24 +39,52 @@ export const createBin = async (req, res) => {
   }
 };
 
+
+
 export const getAllBins = async (req, res) => {
   try {
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 9;
+    const { filter = "all", page = 1, limit = 9 } = req.query;
 
-    const result = await BinService.getAllBinsPaginated(page, limit);
+    let filterCondition = {};
 
-    res.status(200).json({
+    switch (filter) {
+      case "0-50":
+        filterCondition.filled = { $gte: 0, $lte: 50 };
+        break;
+      case "51-75":
+        filterCondition.filled = { $gte: 51, $lte: 75 };
+        break;
+      case "76-99":
+        filterCondition.filled = { $gte: 76, $lte: 99 };
+        break;
+      case "100":
+        filterCondition.filled = 100;
+        break;
+      case "inactive":
+        filterCondition.status = "Inactive";
+        break;
+      default:
+        filterCondition = {};
+    }
+
+    const result = await BinService.getAllBins(
+      filterCondition,
+      Number(page),
+      Number(limit)
+    );
+
+    res.json({
       success: true,
       data: result.data,
-      totalPages: result.pagination.totalPages,
-      currentPage: result.pagination.currentPage,
-      totalItems: result.pagination.totalItems,
+      totalItems: result.totalItems,
+      totalPages: result.totalPages,
+      currentPage: result.currentPage,
     });
   } catch (error) {
+    console.error("❌ Controller error:", error);
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Failed to fetch bins",
     });
   }
 };

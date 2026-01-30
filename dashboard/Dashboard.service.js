@@ -165,14 +165,36 @@ export class DashboardService {
   }
 
   // 🔥 L1-L4 ESCALATIONS
-  static async getEscalationLevels() {
-    return await Bin.aggregate([
-      { $match: { escalationLevel: { $exists: true, $ne: null } } },
-      { $group: { _id: "$escalationLevel", count: { $sum: 1 } } },
-      { $sort: { _id: 1 } },
-      { $limit: 4 }
-    ]);
-  }
+ static async getEscalationLevels() {
+  const now = new Date();
+  
+  // Get all 100% full bins
+  const bins = await Bin.find({ filled: { $gte: 100 } })
+    .select("escalation")
+    .lean(); // Faster for counts
+
+  // Count escalations
+  const counts = {
+    L1: 0,
+    L2: 0, 
+    L3: 0,
+    L4: 0,
+    totalFullBins: bins.length,
+    timestamp: now
+  };
+
+  bins.forEach(bin => {
+    const timeEsc = bin.escalation?.timeEscalations || [];
+    
+    // Check each level
+    if (timeEsc.some(e => e.level === "L1")) counts.L1++;
+    if (timeEsc.some(e => e.level === "L2")) counts.L2++;
+    if (timeEsc.some(e => e.level === "L3")) counts.L3++;
+    if (timeEsc.some(e => e.level === "L4")) counts.L4++;
+  });
+
+  return counts;
+}
 
 
 
