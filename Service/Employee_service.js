@@ -130,12 +130,16 @@ export const updateEmployee = async (id, data) => {
   return employee;
 };
 
-export const getEmployees = async (page, limit) => {
+export const getEmployees = async (
+  searchCondition = {},
+  page = 1,
+  limit = 9
+) => {
   const skip = (page - 1) * limit;
 
-  const totalItems = await Employee.countDocuments();
+  const totalItems = await Employee.countDocuments(searchCondition);
 
-  const employees = await Employee.find()
+  const employees = await Employee.find(searchCondition)
     .sort({ })
     .skip(skip)
     .limit(limit);

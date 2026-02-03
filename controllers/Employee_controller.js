@@ -36,9 +36,27 @@ export const logout = async (req, res) => {
 export const getEmployees = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const limit = parseInt(req.query.limit) || 9;
+    const search = req.query.search || "";
 
-    const result = await employeeService.getEmployees(page, limit);
+    let searchCondition = {};
+
+    if (search) {
+      searchCondition.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { phonenumber: { $regex: search, $options: "i" } },
+        { emailid: { $regex: search, $options: "i" } },
+        { location: { $regex: search, $options: "i" } },
+        { designation: { $regex: search, $options: "i" } },
+        { status: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const result = await employeeService.getEmployees(
+      searchCondition,
+      page,
+      limit
+    );
 
     res.status(200).json({
       success: true,
@@ -46,7 +64,10 @@ export const getEmployees = async (req, res) => {
       pagination: result.pagination,
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
   }
 };
 
