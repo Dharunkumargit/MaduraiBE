@@ -43,10 +43,16 @@ export const createBin = async (req, res) => {
 
 export const getAllBins = async (req, res) => {
   try {
-    const { filter = "all", page = 1, limit = 9 } = req.query;
+    const {
+      filter = "all",
+      page = 1,
+      limit = 9,
+      search = "",
+    } = req.query;
 
     let filterCondition = {};
 
+    // 🔹 FILTER LOGIC
     switch (filter) {
       case "0-50":
         filterCondition.filled = { $gte: 0, $lte: 50 };
@@ -65,6 +71,17 @@ export const getAllBins = async (req, res) => {
         break;
       default:
         filterCondition = {};
+    }
+
+    // 🔹 SEARCH LOGIC (ALL PAGES)
+    if (search) {
+      filterCondition.$or = [
+        { binid: { $regex: search, $options: "i" } },
+        { zone: { $regex: search, $options: "i" } },
+        { ward: { $regex: search, $options: "i" } },
+        { location: { $regex: search, $options: "i" } },
+        { status: { $regex: search, $options: "i" } },
+      ];
     }
 
     const result = await BinService.getAllBins(
@@ -88,6 +105,7 @@ export const getAllBins = async (req, res) => {
     });
   }
 };
+
 
 
 export const getBin = async (req, res) => {
