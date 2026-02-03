@@ -48,11 +48,12 @@ export const getAllBins = async (req, res) => {
       page = 1,
       limit = 9,
       search = "",
+      export: isExport = "false",
     } = req.query;
 
     let filterCondition = {};
 
-    // 🔹 FILTER LOGIC
+    // 🔹 FILTER
     switch (filter) {
       case "0-50":
         filterCondition.filled = { $gte: 0, $lte: 50 };
@@ -69,11 +70,9 @@ export const getAllBins = async (req, res) => {
       case "inactive":
         filterCondition.status = "Inactive";
         break;
-      default:
-        filterCondition = {};
     }
 
-    // 🔹 SEARCH LOGIC (ALL PAGES)
+    // 🔹 SEARCH
     if (search) {
       filterCondition.$or = [
         { binid: { $regex: search, $options: "i" } },
@@ -84,6 +83,13 @@ export const getAllBins = async (req, res) => {
       ];
     }
 
+    // 🔥 EXPORT MODE (NO PAGINATION)
+    if (isExport === "true") {
+      const data = await BinService.getAllBinsForExport(filterCondition);
+      return res.json({ success: true, data });
+    }
+
+    // 🔹 NORMAL PAGINATION (UNCHANGED)
     const result = await BinService.getAllBins(
       filterCondition,
       Number(page),
@@ -97,12 +103,8 @@ export const getAllBins = async (req, res) => {
       totalPages: result.totalPages,
       currentPage: result.currentPage,
     });
-  } catch (error) {
-    console.error("❌ Controller error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch bins",
-    });
+  } catch (err) {
+    res.status(500).json({ success: false });
   }
 };
 

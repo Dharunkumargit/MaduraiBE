@@ -281,70 +281,65 @@ export const syncOutsourceBins = async () => {
 // ================================
 // API FUNCTIONS
 // ================================
-export const getAllBins = async (
-  filterCondition = {},
-  page = 1,
-  limit = 9
-) => {
-  try {
-    const skip = (page - 1) * limit;
+export const getAllBins = async (filter, page, limit) => {
+  const skip = (page - 1) * limit;
 
-    // 🔹 TOTAL COUNT
-    const totalItems = await Bin.countDocuments(filterCondition);
+  const totalItems = await Bin.countDocuments(filter);
 
-    // 🔹 PAGINATED BINS
-    const bins = await Bin.find(filterCondition)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
+  const bins = await Bin.find(filter)
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit);
 
-    // 🔹 CLEARED EVENTS AGGREGATION
-    const clearedSummary = await BinFullEvent.aggregate([
-      {
-        $group: {
-          _id: "$binid",
-          totalClearedEvents: { $sum: "$analytics.clearedEvents" },
-          totalTonnageCleared: {
-            $sum: "$analytics.totalTonnageCleared",
-          },
-        },
+  const clearedSummary = await BinFullEvent.aggregate([
+    {
+      $group: {
+        _id: "$binid",
+        totalClearedEvents: { $sum: "$analytics.clearedEvents" },
       },
-    ]);
+    },
+  ]);
 
-    const clearedMap = clearedSummary.reduce((acc, cur) => {
-      acc[cur._id] = {
-        totalClearedEvents: cur.totalClearedEvents || 0,
-        totalTonnageCleared: cur.totalTonnageCleared || 0,
-      };
-      return acc;
-    }, {});
+  const clearedMap = clearedSummary.reduce((acc, cur) => {
+    acc[cur._id] = cur.totalClearedEvents || 0;
+    return acc;
+  }, {});
 
-    // 🔹 FINAL RESPONSE FORMAT
-    const formattedBins = bins.map((bin) => {
-      const clearedData = clearedMap[bin.binid] || {};
+  const data = bins.map((bin) => ({
+    ...bin.toObject(),
+    totalClearedEvents: clearedMap[bin.binid] || 0,
+  }));
 
-      return {
-        ...bin.toObject(),
-        totalClearedEvents: clearedData.totalClearedEvents || 0,
-        totalTonsCleared: litersToTons(
-          clearedData.totalTonnageCleared ||
-            bin.totalClearedAmount ||
-            0
-        ),
-        isActive: bin.status === "Active",
-      };
-    });
+  return {
+    data,
+    totalItems,
+    totalPages: Math.ceil(totalItems / limit),
+    currentPage: page,
+  };
+};
 
-    return {
-      data: formattedBins,
-      totalItems,
-      totalPages: Math.ceil(totalItems / limit),
-      currentPage: page,
-    };
-  } catch (error) {
-    console.error("❌ BinService error:", error);
-    throw error;
-  }
+// 🔥 EXPORT SERVICE (NO PAGINATION)
+export const getAllBinsForExport = async (filter) => {
+  const bins = await Bin.find(filter).sort({ createdAt: -1 });
+
+  const clearedSummary = await BinFullEvent.aggregate([
+    {
+      $group: {
+        _id: "$binid",
+        totalClearedEvents: { $sum: "$analytics.clearedEvents" },
+      },
+    },
+  ]);
+
+  const clearedMap = clearedSummary.reduce((acc, cur) => {
+    acc[cur._id] = cur.totalClearedEvents || 0;
+    return acc;
+  }, {});
+
+  return bins.map((bin) => ({
+    ...bin.toObject(),
+    totalClearedEvents: clearedMap[bin.binid] || 0,
+  }));
 };
 
 
