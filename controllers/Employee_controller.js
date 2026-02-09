@@ -113,12 +113,31 @@ export const deleteEmployee = async (req, res) => {
 
 export const getEmployeeReport = async (req, res) => {
   try {
-     const sessionId = req.headers['x-session-id'] || req.body.sessionId;
     const { fromDate, toDate } = req.query;
-    const report = await employeeService.generateEmployeeWiseReport(fromDate, toDate, sessionId);
-    res.json({ success: true, data: report });
+
+    if (!fromDate || !toDate) {
+      return res.status(400).json({
+        success: false,
+        error: "fromDate and toDate are required"
+      });
+    }
+
+    const report = await employeeService.generateEmployeeWiseReport(
+      fromDate,
+      toDate
+    );
+
+    res.status(200).json({
+      success: true,
+      data: report
+    });
+
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error("❌ Employee report error:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
   }
 };
 export const updateuser = async (req, res) => {
