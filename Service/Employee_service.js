@@ -165,11 +165,7 @@ export const deleteEmployee = async (id, sessionId) => {
   return { message: "Employee deleted successfully" };
 };
 
-export const generateEmployeeWiseReport = async (
-  fromDate,
-  toDate,
-  sessionId,
-) => {
+export const generateEmployeeWiseReport = async (fromDate, toDate) => {
   const filter = {};
   if (fromDate && toDate) {
     filter.createdAt = {
@@ -179,25 +175,14 @@ export const generateEmployeeWiseReport = async (
   }
 
   const employees = await Employee.find(filter);
-  return employees.map((emp) => {
-    const taskassigned = Math.floor(Math.random() * 20) + 5;
-    const taskcompleted = Math.floor(taskassigned * 0.8);
-    const averagecleaningtime = Math.floor(Math.random() * 30) + 15;
-    const escalations = Math.floor(Math.random() * 5);
-    const garbage = Math.floor(Math.random() * 10) + 1;
-    const compliance = Math.round((taskcompleted / taskassigned) * 100);
-
-    return {
-      employeename: emp.name,
-      assignedzone: emp.zone?.[0] || emp.ward?.[0] || "N/A",
-      taskassigned,
-      taskcompleted,
-      averagecleaningtime: `${averagecleaningtime} mins`,
-      compliance: `${compliance}%`,
-      escalations,
-      garbage: `${garbage} Tons`,
-    };
-  });
+  return employees.map((emp) => ({
+    employeename: emp.name,
+    assignedzone: emp.zone?.[0] || emp.ward?.[0] || "N/A",
+    taskassigned: Math.floor(Math.random() * 20) + 5,
+    taskcompleted: Math.floor(Math.random() * 15) + 5,
+    escalations: Math.floor(Math.random() * 5),
+    garbage: `${Math.floor(Math.random() * 10) + 1} Tons`,
+  }));
 };
 
 // Backend: updateemployee function
