@@ -268,7 +268,7 @@ export const generateEmployeeWiseReport = async (fromDate, toDate) => {
         taskassigned: taskAssigned,
         taskcompleted: taskCompleted,
         escalations: escalations,
-        garbage: `${parseFloat(totalGarbage.toFixed(2))} Tons`
+        garbage: `${parseFloat(totalGarbage.toFixed(2))} T`
       };
     });
 
