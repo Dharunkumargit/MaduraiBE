@@ -1,2 +1,0 @@
-{"level":"error","message":"Error while adding role: E11000 duplicate key error collection: madurai.roles index: role_name_1 dup key: { role_name: \"admin\" }","timestamp":"2026-01-22T08:31:21.528Z"}
-{"level":"error","message":"Error creating role Acces level: E11000 duplicate key error collection: madurai.roles index: role_name_1 dup key: { role_name: \"admin\" }","timestamp":"2026-01-22T08:31:21.530Z"}

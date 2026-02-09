@@ -36,6 +36,28 @@ export class BinFullEventController {
     res.status(500).json({ success: false, error: error.message });
   }
 };
+static async getEmployeeWiseReport(req, res) {
+    try {
+      const { fromDate, toDate } = req.query;
+
+      if (!fromDate || !toDate) {
+        return res.status(400).json({
+          success: false,
+          message: "fromDate and toDate required"
+        });
+      }
+
+      const data =
+        await BinFullEventService.getEmployeeWiseReport(fromDate, toDate);
+
+      res.json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
 
 }
 

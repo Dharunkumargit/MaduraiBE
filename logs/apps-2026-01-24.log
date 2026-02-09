@@ -1,2 +1,0 @@
-{"level":"error","message":"Error while getting all roles: getaddrinfo ENOTFOUND ac-pvq5p3s-shard-00-02.ztslkpq.mongodb.net","timestamp":"2026-01-24T06:15:59.180Z"}
-{"level":"error","message":"Error getting all roles: getaddrinfo ENOTFOUND ac-pvq5p3s-shard-00-02.ztslkpq.mongodb.net","timestamp":"2026-01-24T06:15:59.196Z"}

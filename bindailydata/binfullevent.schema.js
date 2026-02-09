@@ -4,7 +4,12 @@ const BinFullEventSchema = new mongoose.Schema({
   binid: { type: String, required: true },
   zone: String,
   ward: String,
-  
+  employeeId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Employee",
+  },
+
+  employeeName: String,
   // Daily date
   date: { type: Date, required: true }, // Start of day
   

@@ -1,2 +1,0 @@
-{"level":"error","message":"Error while adding role: Role validation failed: status: `Active` is not a valid enum value for path `status`.","timestamp":"2026-01-26T12:34:35.213Z"}
-{"level":"error","message":"Error creating role Acces level: Role validation failed: status: `Active` is not a valid enum value for path `status`.","timestamp":"2026-01-26T12:34:35.223Z"}

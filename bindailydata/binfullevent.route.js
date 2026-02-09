@@ -7,5 +7,6 @@ const router = Router();
 
 router.get('/analytics', BinFullEventController.getAnalytics);
 router.get('/binwise', BinFullEventController.getBinWise);
+router.get('/employeereport',BinFullEventController.getEmployeeWiseReport)
 
 export default router;
