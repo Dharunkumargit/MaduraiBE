@@ -113,7 +113,7 @@ export const deleteEmployee = async (req, res) => {
 
 export const getEmployeeReport = async (req, res) => {
   try {
-    const sessionId = req.headers['x-session-id'] || req.body.sessionId;
+     const sessionId = req.headers['x-session-id'] || req.body.sessionId;
     const { fromDate, toDate } = req.query;
     const report = await employeeService.generateEmployeeWiseReport(fromDate, toDate, sessionId);
     res.json({ success: true, data: report });

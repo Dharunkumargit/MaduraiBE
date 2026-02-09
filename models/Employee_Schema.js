@@ -15,6 +15,18 @@ const EmployeeSchema = new mongoose.Schema(
     role_name: { type: String, default: "" },
     role_id: { type: String, default: "" },
     password: { type: String },
+    assignedZones: [{
+    zone: { type: String, required: true },
+    ward: { type: String, required: true },
+    assignedDate: { type: Date, default: Date.now }
+  }],
+  performance: {
+    totalTasksCompleted: { type: Number, default: 0 },
+    totalGarbageCollected: { type: Number, default: 0 }, // in tons
+    averageResponseTime: { type: Number, default: 0 }, // in minutes
+    escalationsCount: { type: Number, default: 0 }
+  }
+
   },
   { timestamps: true },
 );
