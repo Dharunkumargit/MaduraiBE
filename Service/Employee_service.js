@@ -2,7 +2,7 @@ import Employee from "../models/Employee_Schema.js";
 import IdcodeServices from "../idcode/idcode.service.js";
 import bcrypt from "bcryptjs";
 import RoleModel from "../roles/Role.schema.js";
-import binfulleventSchema from "../bindailydata/binfullevent.schema.js";
+import BinFullEvent from "../bindailydata/binfullevent.schema.js";
 
 // In-memory session store
 const activeSessions = new Map();
@@ -166,28 +166,35 @@ export const deleteEmployee = async (id, sessionId) => {
   return { message: "Employee deleted successfully" };
 };
 
-
 export const generateEmployeeWiseReport = async (fromDate, toDate) => {
   try {
+    // -------------------------
+    // DATE RANGE
+    // -------------------------
     const from = new Date(fromDate);
     from.setHours(0, 0, 0, 0);
+
     const to = new Date(toDate);
     to.setHours(23, 59, 59, 999);
 
-    console.log('📅 Report date range:', { from, to });
+    console.log("📅 Employee report range:", { from, to });
 
-    // Get all active employees
+    // -------------------------
+    // FETCH ACTIVE EMPLOYEES
+    // -------------------------
     const employees = await Employee.find({ status: "Active" }).lean();
-    console.log('👥 Active employees found:', employees.length);
+    console.log("👥 Active employees:", employees.length);
 
-    // Get bin events aggregated by zone/ward
-    const binEvents = await binfulleventSchema.aggregate([
+    // -------------------------
+    // AGGREGATE BIN EVENTS (ZONE + WARD)
+    // -------------------------
+    const binEvents = await BinFullEvent.aggregate([
       { $match: { date: { $gte: from, $lte: to } } },
       {
         $group: {
           _id: { zone: "$zone", ward: "$ward" },
-          totalTasks: { $sum: "$analytics.fullEvents" },
-          completedTasks: { $sum: "$analytics.clearedEvents" },
+          tasksAssigned: { $sum: "$analytics.fullEvents" },
+          tasksCompleted: { $sum: "$analytics.clearedEvents" },
           totalGarbage: { $sum: "$analytics.totalTonnageCleared" },
           totalClearTime: { $sum: "$analytics.totalClearTimeMins" },
           escalations: {
@@ -195,91 +202,79 @@ export const generateEmployeeWiseReport = async (fromDate, toDate) => {
               $cond: [
                 { $gt: ["$analytics.consecutiveDaysFull", 1] },
                 1,
-                0
-              ]
-            }
-          }
-        }
-      }
+                0,
+              ],
+            },
+          },
+        },
+      },
     ]);
 
-    console.log('🗑️ Bin events found:', binEvents.length);
+    console.log("🗑️ Bin event groups:", binEvents.length);
 
-    // Map employees to their zone/ward data
-    const reportData = employees.map(employee => {
+    // -------------------------
+    // MAP EMPLOYEE → EVENTS
+    // -------------------------
+    const report = employees.map((emp) => {
       let taskAssigned = 0;
       let taskCompleted = 0;
-      let totalGarbage = 0;
-      let totalClearTime = 0;
+      let garbage = 0;
       let escalations = 0;
 
-      // Get employee zones/wards - handle both formats
-      const employeeZones = employee.zone || [];
-      const employeeWards = employee.ward || [];
-      const assignedZones = employee.assignedZones || [];
+      // Normalize assigned areas
+      let assignedAreas = [];
 
-      // Method 1: Match using zone/ward arrays
-      employeeZones.forEach((zone, index) => {
-        const ward = employeeWards[index];
-        const event = binEvents.find(
-          e => e._id.zone === zone && e._id.ward === ward
-        );
-
-        if (event) {
-          taskAssigned += event.totalTasks || 0;
-          taskCompleted += event.completedTasks || 0;
-          totalGarbage += event.totalGarbage || 0;
-          totalClearTime += event.totalClearTime || 0;
-          escalations += event.escalations || 0;
-        }
-      });
-
-      // Method 2: Match using assignedZones array (if used)
-      assignedZones.forEach(area => {
-        const event = binEvents.find(
-          e => e._id.zone === area.zone && e._id.ward === area.ward
-        );
-
-        if (event) {
-          taskAssigned += event.totalTasks || 0;
-          taskCompleted += event.completedTasks || 0;
-          totalGarbage += event.totalGarbage || 0;
-          totalClearTime += event.totalClearTime || 0;
-          escalations += event.escalations || 0;
-        }
-      });
-
-      // Format assigned zone/ward display
-      let assignedZoneDisplay = "N/A";
-      if (employeeZones.length > 0 && employeeWards.length > 0) {
-        assignedZoneDisplay = employeeZones
-          .map((zone, i) => `${zone}/${employeeWards[i] || ''}`)
-          .filter(Boolean)
-          .join(", ");
-      } else if (assignedZones.length > 0) {
-        assignedZoneDisplay = assignedZones
-          .map(a => `${a.zone}/${a.ward}`)
-          .join(", ");
+      // Format 1: zone + ward arrays
+      if (Array.isArray(emp.zone) && Array.isArray(emp.ward)) {
+        emp.zone.forEach((z, i) => {
+          assignedAreas.push({ zone: z, ward: emp.ward[i] });
+        });
       }
 
+      // Format 2: assignedZones array
+      if (Array.isArray(emp.assignedZones)) {
+        assignedAreas.push(...emp.assignedZones);
+      }
+
+      // Match bin events
+      assignedAreas.forEach(({ zone, ward }) => {
+        const event = binEvents.find(
+          (e) => e._id.zone === zone && e._id.ward === ward
+        );
+
+        if (event) {
+          taskAssigned += event.tasksAssigned || 0;
+          taskCompleted += event.tasksCompleted || 0;
+          garbage += event.totalGarbage || 0;
+          escalations += event.escalations || 0;
+        }
+      });
+
+      // Display zones
+      const assignedZoneDisplay =
+        assignedAreas.length > 0
+          ? assignedAreas.map((a) => `${a.zone}/${a.ward}`).join(", ")
+          : "N/A";
+
       return {
-        employeename: employee.name || "N/A",
+        employeename: emp.name || "N/A",
+        role: emp.role_name || "N/A",
         assignedzone: assignedZoneDisplay,
         taskassigned: taskAssigned,
         taskcompleted: taskCompleted,
-        escalations: escalations,
-        garbage: `${parseFloat(totalGarbage.toFixed(2))} T`
+        escalations,
+        garbage: `${garbage.toFixed(2)} T`,
       };
     });
 
-    console.log('✅ Report generated for', reportData.length, 'employees');
-    return reportData;
-
+    console.log("✅ Employee report generated:", report.length);
+    return report;
   } catch (error) {
-    console.error('❌ Error generating employee report:', error);
+    console.error("❌ Employee report error:", error);
     throw error;
   }
 };
+
 
 // Backend: updateemployee function
 export const updateuser = async (id, data) => {
