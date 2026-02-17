@@ -1,7 +1,7 @@
 // services/escalationService.js
 import Bin from "../bins/Bin.schema.js";
 import Employee from "../models/Employee_Schema.js";
-import WhatsappService from "../utils/whtasapp.js";
+import WhatsAppService from "../utils/whtasapp.js";
 
 class EscalationService {
   // =================================================
@@ -204,18 +204,17 @@ class EscalationService {
   // =================================================
   // MOCK WHATSAPP
   // =================================================
-  static async sendWhatsApp(phone, data) {
+ static async sendWhatsApp(phone, messageText) {
+  console.log("📤 Sending to:", phone);
+    console.log("📝 Message:", message);
   return WhatsAppService.sendMessage({
     mobile: phone,
-    templateId: "bill_reminder",   // 🔥 Your KWIC template
+    templateId: "bin_escalation_template", // Must match Gupshup template
     variables: {
-      days: data.days || "0",
-      amount: data.amount || "N/A",
-      due_date: data.due_date || new Date().toLocaleDateString("en-IN"),
-    },
+      message: messageText
+    }
   });
 }
-
 static async getRoleEscalations(role) {
   const now = new Date();
 

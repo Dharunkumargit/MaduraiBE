@@ -1,32 +1,32 @@
 import axios from "axios";
 
-const KWIC_API_KEY = "6752cd5a54b5c67b93e010b2";
-const BASE_URL = "https://app.kwic.in/api/v1/message/send";
-
 class WhatsAppService {
   static async sendMessage({ mobile, templateId, variables }) {
     try {
-      const payload = {
-        mobile_number: mobile,
-        template_id: templateId,
-        variable: variables,
-      };
-
-      const response = await axios.post(BASE_URL, payload, {
-        headers: {
-          Authorization: `Bearer ${KWIC_API_KEY}`,
-          "Content-Type": "application/json",
+      const response = await axios.post(
+        "https://api.gupshup.io/sm/api/v1/msg",
+        {
+          channel: "whatsapp",
+          source: "919342571277",
+          destination: mobile,
+          template: {
+            id: templateId,
+            params: Object.values(variables)
+          }
         },
-      });
+        {
+          headers: {
+            "Content-Type": "application/json",
+            apikey: "6752cd5a54b5c67b93e010b2" // ✅ Your API key
+          }
+        }
+      );
 
-      console.log("✅ WhatsApp sent:", mobile);
+      console.log("✅ WhatsApp Sent:", response.data);
       return response.data;
     } catch (error) {
-      console.error(
-        "❌ WhatsApp failed:",
-        error.response?.data || error.message
-      );
-      throw new Error("WhatsApp delivery failed");
+      console.error("❌ WhatsApp Error:", error.response?.data || error.message);
+      return null;
     }
   }
 }

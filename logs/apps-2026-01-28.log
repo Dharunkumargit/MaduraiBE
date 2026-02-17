@@ -1,4 +1,0 @@
-{"level":"info","message":"Role created: ROLE003","timestamp":"2026-01-27T20:44:11.886Z"}
-{"level":"info","message":"Role deleted: ROLE003","timestamp":"2026-01-27T20:44:17.012Z"}
-{"level":"error","message":"Error while getting all roles: getaddrinfo ENOTFOUND ac-pvq5p3s-shard-00-02.ztslkpq.mongodb.net","timestamp":"2026-01-28T07:19:28.236Z"}
-{"level":"error","message":"Error while getting all roles: getaddrinfo ENOTFOUND ac-pvq5p3s-shard-00-02.ztslkpq.mongodb.net","timestamp":"2026-01-28T07:20:07.185Z"}

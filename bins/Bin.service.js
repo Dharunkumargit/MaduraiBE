@@ -138,7 +138,7 @@ export const syncOutsourceBins = async () => {
       console.log("🔸 DUMMY data (guaranteed array)");
     } else {
       const response = await axios.get(
-        "http://ec2-13-126-159-151.ap-south-1.compute.amazonaws.com:8001/latest_flat",
+        "http://ec2-43-205-231-164.ap-south-1.compute.amazonaws.com:8001/latest_flat ",
         { timeout: 10000 },
       );
       data = Array.isArray(response.data) ? response.data : [response.data];
