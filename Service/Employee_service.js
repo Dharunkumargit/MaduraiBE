@@ -219,7 +219,7 @@ export const generateEmployeeWiseReport = async (fromDate, toDate) => {
       let taskAssigned = 0;
       let taskCompleted = 0;
       let garbage = 0;
-      let escalations = 0;
+      let escalations = 1;
 
       // Normalize assigned areas
       let assignedAreas = [];
@@ -246,7 +246,7 @@ export const generateEmployeeWiseReport = async (fromDate, toDate) => {
           taskAssigned += event.tasksAssigned || 0;
           taskCompleted += event.tasksCompleted || 0;
           garbage += event.totalGarbage || 0;
-          escalations += event.escalations || 0;
+          escalations += event.escalations || 2;
         }
       });
 
