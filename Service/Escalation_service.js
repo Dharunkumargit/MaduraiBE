@@ -1,240 +1,141 @@
 // services/escalationService.js
 import Bin from "../bins/Bin.schema.js";
 import Employee from "../models/Employee_Schema.js";
-import WhatsAppService from "../utils/whtasapp.js";
+import { sendWhatsAppAlert } from "../utils/whtasapp.js";
+import { ROLE_CONTACTS } from "../config/constants.js";
 
 class EscalationService {
-  // =================================================
-  // MAIN ESCALATION HANDLER - FIXED TIMING LOGIC
-  // =================================================
-  static async processBinEscalation(binId) {
-    const bin = await Bin.findById(binId);
-    if (!bin) return [];
+   static async processBinEscalation(binId) {
+  const bin = await Bin.findById(binId);
+  if (!bin) return [];
 
-    const fillLevel = bin.filled;
+  const rolesTriggered = [];
 
-    const now = new Date();
-    let rolesToNotify = [];
+  const levels = [
+    { level: "L1", after: 0, role: "Sanitary Inspector" },
+    { level: "L2", after: 30, role: "Sanitary Officer" },
+    { level: "L3", after: 60, role: "ACHO" },
+    { level: "L4", after: 120, role: "Commissioner" },
+  ];
 
-    console.log(`🔍 ${bin.binid} → ${fillLevel}%`);
+  const minutesAt100 = bin.lastFullAt
+    ? (new Date() - new Date(bin.lastFullAt)) / (1000 * 60)
+    : 0;
 
-    // Init escalation object
-    bin.escalation ||= {};
-    bin.escalation.thresholdsHit ||= {};
-    bin.escalation.timeEscalations ||= [];
+  for (const rule of levels) {
+    if (minutesAt100 >= rule.after) {
+      if (!bin.escalations?.some(e => e.level === rule.level)) {
 
-    // =================================================
-    // RESET WHEN CLEARED (<50%)
-    // =================================================
-    if (fillLevel < 50) {
-      bin.escalation = {
-        thresholdsHit: {},
-        timeEscalations: [],
-        status: "normal",
-      };
-
-      bin.lastFullAt = null;
-
-      bin.markModified("escalation");
-      await bin.save();
-
-      console.log(`🧹 Bin ${bin.binid} escalation cleared`);
-      return [];
-    }
-
-    // =================================================
-    // 75% → Ward Supervisor (ONCE)
-    // =================================================
-    if (fillLevel >= 75 && !bin.escalation.thresholdsHit["75%"]) {
-      const zone = Array.isArray(bin.zone) ? bin.zone[0] : bin.zone;
-      const ward = Array.isArray(bin.ward) ? bin.ward[0] : bin.ward;
-
-      const supervisor = await Employee.findOne({
-        role_name: /Ward Supervisor/i,
-        zone: new RegExp(zone, "i"),
-        ward: new RegExp(ward, "i"),
-      });
-
-      if (supervisor) {
-        await this.sendWhatsApp(supervisor.phonenumber, {
-          message: `🚨 Bin ${bin.binid} reached 75% (${zone}-${ward})`,
+        // Save escalation
+        bin.escalations = bin.escalations || [];
+        bin.escalations.push({
+          level: rule.level,
+          time: new Date(),
         });
 
-        bin.escalation.thresholdsHit["75%"] = {
-          time: now,
-          notified: [supervisor.name],
-        };
+        // Send WhatsApp
+        const contacts = ROLE_CONTACTS[rule.role] || [];
 
-        bin.escalation.status = "75%";
-        rolesToNotify.push("Ward Supervisor");
-        await bin.save();
+        for (const number of contacts) {
+          await sendWhatsAppAlert({
+            mobile: number,
+            location: bin.location,
+            ward: bin.ward,
+            zone: bin.zone,
+            fill: bin.filled,
+            // imageUrl: bin.history?.[0]?.image_url || ""
+          });
+        }
+
+        rolesTriggered.push(rule.role);
       }
     }
-
-    // =================================================
-    // 90% → Sanitary Inspector (ONCE)
-    // =================================================
-    if (fillLevel >= 90 && !bin.escalation.thresholdsHit["90%"]) {
-      await this.sendWhatsApp("SI_PHONE", {
-        message: `🚨 Bin ${bin.binid} reached 90%`,
-      });
-
-      bin.escalation.thresholdsHit["90%"] = {
-        time: now,
-        notified: ["Sanitary Inspector"],
-      };
-
-      bin.escalation.status = "90%";
-      rolesToNotify.push("Sanitary Inspector");
-      await bin.save();
-    }
-
-    // =================================================
-    // 🔴 100% → IMMEDIATE ALERT (ONCE ONLY)
-    // =================================================
-    if (fillLevel >= 100 && !bin.escalation.thresholdsHit["100%"]) {
-      console.log("🚨 100% reached → Initial alert");
-
-      await this.sendWhatsApp("SANITARY_OFFICER_PHONE", {
-        message: `🚨 Bin ${bin.binid} reached 100%`,
-      });
-
-      bin.escalation.thresholdsHit["100%"] = {
-        time: now,
-        notified: ["Sanitary Officer"],
-      };
-
-      bin.escalation.status = "100%";
-      bin.lastFullAt = now; // ⏱ START TIMER HERE
-
-      await bin.save();
-
-      // ⛔ STOP HERE → NO L1 IN SAME CYCLE
-      return ["Sanitary Officer"];
-    }
-
-    // 🔥 🔥 FIXED: ONLY CHECK TIME ESCALATIONS AFTER 100% + lastFullAt EXISTS
-    // =================================================
-    if (fillLevel >= 100 && bin.lastFullAt) {
-      const lastFullDate = new Date(bin.lastFullAt); // ✅ Fix #1: Single conversion
-      const nowDate = new Date(); // ✅ Fix #2: Explicit now
-      const minutesAt100 = Math.floor((nowDate - lastFullDate) / (1000 * 60));
-
-      console.log(
-        `⏱ ${bin.binid} full for ${minutesAt100} mins (${lastFullDate.toLocaleTimeString("en-IN")})`,
-      );
-
-      // -------- L1 (21 mins) --------
-      if (
-        minutesAt100 >= 21 &&
-        !bin.escalation.timeEscalations.some((e) => e.level === "L1")
-      ) {
-        await this.sendWhatsApp("ACHO_PHONE", {
-          message: `🚨 Bin ${bin.binid} is FULL for ${minutesAt100} mins`,
-        });
-
-        bin.escalation.timeEscalations.push({
-          level: "L1",
-          role: "ACHO",
-          minutes: minutesAt100,
-          time: now,
-        });
-
-        bin.escalation.status = "L1";
-        bin.markModified("escalation");
-        rolesToNotify.push("ACHO");
-        await bin.save();
-      }
-
-      // -------- L2 (31 mins) --------
-      if (
-        minutesAt100 >= 31 &&
-        !bin.escalation.timeEscalations.some((e) => e.level === "L2")
-      ) {
-        bin.escalation.timeEscalations.push({
-          level: "L2",
-          role: "CHO",
-          minutes: minutesAt100,
-          time: now,
-        });
-
-        bin.escalation.status = "L2";
-        rolesToNotify.push("CHO");
-        await bin.save();
-      }
-
-      // -------- L3 (51 mins) --------
-      if (
-        minutesAt100 >= 51 &&
-        !bin.escalation.timeEscalations.some((e) => e.level === "L3")
-      ) {
-        bin.escalation.timeEscalations.push({
-          level: "L3",
-          role: "Deputy Commissioner",
-          minutes: minutesAt100,
-          time: now,
-        });
-
-        bin.escalation.status = "L3";
-        rolesToNotify.push("Deputy Commissioner");
-        await bin.save();
-      }
-
-      // -------- L4 (61 mins) --------
-      if (
-        minutesAt100 >= 61 &&
-        !bin.escalation.timeEscalations.some((e) => e.level === "L4")
-      ) {
-        bin.escalation.timeEscalations.push({
-          level: "L4",
-          role: "Commissioner",
-          minutes: minutesAt100,
-          time: now,
-        });
-
-        bin.escalation.status = "L4";
-        rolesToNotify.push("Commissioner");
-        await bin.save();
-      }
-    }
-
-    return rolesToNotify;
   }
 
-  // =================================================
-  // MOCK WHATSAPP
-  // =================================================
- static async sendWhatsApp(phone, messageText) {
-  console.log("📤 Sending to:", phone);
-    console.log("📝 Message:", message);
-  return WhatsAppService.sendMessage({
-    mobile: phone,
-    templateId: "bin_escalation_template", // Must match Gupshup template
-    variables: {
-      message: messageText
-    }
-  });
+  await bin.save();
+  return rolesTriggered;
 }
+
+  // ===============================
+  // TIME ESCALATION HANDLER
+  // ===============================
+  static async handleTimeEscalation(
+    bin,
+    minutes,
+    level,
+    threshold,
+    role
+  ) {
+    if (
+      minutes >= threshold &&
+      !bin.escalation.timeEscalations.some((e) => e.level === level)
+    ) {
+      await this.notify(role, ROLE_CONTACTS[role], bin);
+
+      bin.escalation.timeEscalations.push({
+        level,
+        role,
+        minutes,
+        time: new Date(),
+      });
+
+      bin.escalation.status = level;
+      console.log(`🚨 ${bin.binid} escalated to ${role}`);
+    }
+  }
+
+  // ===============================
+  // NOTIFY METHOD
+  // ===============================
+  static async notify(role, phones, bin) {
+  if (!phones) {
+    console.log(`❌ No phone for ${role}`);
+    return;
+  }
+
+  // Always convert to array
+  const phoneList = Array.isArray(phones) ? phones : [phones];
+
+  for (const phone of phoneList) {
+    try {
+      const cleanPhone = phone.toString().replace(/\D/g, "");
+
+      console.log(`📤 Sending alert to ${role}: ${cleanPhone}`);
+
+      const result = await sendWhatsAppAlert({
+        mobile: cleanPhone,
+        location: bin.location || "Unknown",
+        ward: bin.ward?.toString() || "0",
+        zone: bin.zone?.toString() || "0",
+        fill: bin.filled?.toString(),
+      });
+
+      console.log(`✅ WhatsApp Success → ${cleanPhone}`, result);
+    } catch (err) {
+      console.error(`❌ Failed for ${phone}`, err.message);
+    }
+  }
+}
+
 static async getRoleEscalations(role) {
   const now = new Date();
 
-  // Only 100% full bins
   const bins = await Bin.find({ filled: { $gte: 100 } })
-    .select("binid filled zone ward status escalation lastFullAt location")
+    .select("binid filled zone ward status escalation lastFullAt location mobile")
     .sort({ lastFullAt: -1 });
 
   const levelsOrder = ["L4", "L3", "L2", "L1"];
 
-  // ✅ FILTER OUT bins with ZERO escalations BEFORE mapping
   const validBins = bins.filter(bin => {
     const timeEsc = bin.escalation?.timeEscalations || [];
-    return timeEsc.length > 0;  // Only bins WITH escalations
+    return timeEsc.length > 0;
   });
 
-  const transformed = validBins.map((bin) => {
+  const transformed = [];
+
+  for (const bin of validBins) {
     const timeEsc = bin.escalation?.timeEscalations || [];
 
-    // ✅ Your new logic - perfect!
     let highestLevel = "Wait for escalation";
     for (const lvl of levelsOrder) {
       if (timeEsc.some((e) => e.level === lvl)) {
@@ -247,20 +148,18 @@ static async getRoleEscalations(role) {
       ? Math.floor((now - new Date(bin.lastFullAt)) / (1000 * 60))
       : 0;
 
-    const roleVisibleLevels = {
-      ACHO: ["L1", "L2", "L3", "L4"],
-      CHO: ["L2", "L3", "L4"],
-      "Deputy Commissioner": ["L3", "L4"],
-      Commissioner: ["L4"],
-      Admin: ["L1", "L2", "L3", "L4"],
-    };
-    const visibleLevels = roleVisibleLevels[role] || ["L1"];
+    
+    // if (bin.mobile) {
+    //   await sendWhatsAppAlert({
+    //     mobile: "919342571277",
+    //     location: bin.location || "Unknown",
+    //     ward: bin.ward,
+    //     zone: bin.zone,
+    //     fill: bin.filled
+    //   });
+    // }
 
-    const visibleEscalations = timeEsc.filter((e) =>
-      visibleLevels.includes(e.level),
-    );
-
-    return {
+    transformed.push({
       binid: bin.binid,
       location: bin.location || `${bin.zone} / ${bin.ward}`,
       zone: bin.zone,
@@ -268,9 +167,9 @@ static async getRoleEscalations(role) {
       filled: bin.filled,
       currentLevel: highestLevel,
       minutesAt100,
-      escalations: visibleEscalations,
-    };
-  });
+      escalations: timeEsc,
+    });
+  }
 
   return {
     role,

@@ -5,6 +5,7 @@ import {
   acknowledgeEscalation 
 } from '../controllers/Escalation_controller.js';
 import EscalationService from '../Service/Escalation_service.js';
+import { sendWhatsAppAlert } from '../utils/whtasapp.js';
 
 const router = express.Router();
 
